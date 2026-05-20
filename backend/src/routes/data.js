@@ -12,6 +12,45 @@ router.get('/years', async (req, res) => {
   res.json(data)
 })
 
+// GET /api/data/panel?from=&to= — full dashboard panel in one fetch.
+// Paginates through Supabase to bypass PostgREST's 1000-row cap.
+router.get('/panel', async (req, res) => {
+  const from = req.query.from ? parseInt(req.query.from) : null
+  const to   = req.query.to   ? parseInt(req.query.to)   : null
+
+  const COLS = [
+    'school_district_geoid', 'school_district_name', 'sd_type', 'county', 'year',
+    'books_combined', 'rolling_3yr_combined',
+    'doe_total_enrollment', 'doe_high_needs_count', 'doe_high_needs_pct',
+    'census_pop_0_4', 'census_pop_5_9', 'census_pop_0_9',
+    'ratio_0_9', 'ratio_0_4', 'ratio_5_9',
+    'ratio_0_9_hn', 'ratio_0_4_hn', 'ratio_5_9_hn',
+    'tier_overall', 'tier_hn',
+  ].join(', ')
+
+  const PAGE = 1000
+  const all = []
+  let offset = 0
+
+  while (true) {
+    let q = publicSupabase.from('district_tiers').select(COLS)
+    if (from != null) q = q.gte('year', from)
+    if (to   != null) q = q.lte('year', to)
+    q = q.order('year', { ascending: true })
+         .order('school_district_geoid', { ascending: true })
+         .range(offset, offset + PAGE - 1)
+
+    const { data, error } = await q
+    if (error) return res.status(500).json({ error: error.message })
+    if (!data.length) break
+    all.push(...data)
+    if (data.length < PAGE) break
+    offset += PAGE
+  }
+
+  res.json(all)
+})
+
 // GET /api/data/districts?year=&county= — all districts for a year (map + table)
 router.get('/districts', async (req, res) => {
   const { year, county } = req.query

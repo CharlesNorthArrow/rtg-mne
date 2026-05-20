@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { TIER_CONFIG, getTierColor } from '../../lib/tiers.js'
+import { fmtBpc, fmtInt, SD_TYPE_LABEL } from '../../lib/format.js'
+import Legend from './Legend.jsx'
 
-// TODO: swap OSM tiles for a managed tile provider (MapTiler, Carto) before production —
-// OSM's tile.openstreetmap.org has a usage policy that doesn't allow heavy app traffic.
+// OSM raster basemap. TODO: swap for a managed tile provider before production —
+// OSM's tile.openstreetmap.org isn't licensed for heavy app traffic.
 const BASE_STYLE = {
   version: 8,
   sources: {
@@ -14,13 +16,13 @@ const BASE_STYLE = {
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.45 } }],
+  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.5 } }],
 }
 
 const CT_CENTER = [-72.7, 41.55]
-const CT_ZOOM   = 7.5
+const CT_ZOOM   = 7.7
 
-const NO_DATA_COLOR = TIER_CONFIG[null].mapColor
+const NO_DATA_COLOR = '#E5E7EB' // light grey on the map; the Legend shows the striped pattern
 
 function featureBounds(features) {
   let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity
@@ -42,22 +44,29 @@ function featureBounds(features) {
   return [[minLon, minLat], [maxLon, maxLat]]
 }
 
-export default function MapView({ districts, tierMode, selectedGeoid, onSelectDistrict, countyFiltered }) {
+export default function MapView({
+  panelByYear,
+  year,
+  tierMode,
+  tierOf,           // (row) => tier number | null
+  ratioOf,          // (row) => ratio | null
+  visibleGeoids,    // Set<geoid> | 'all'
+  selectedGeoid,
+  onSelectDistrict,
+  countyFiltered,
+}) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
   const geojsonRef   = useRef(null)
   const [styleReady, setStyleReady] = useState(false)
-  const [hover, setHover] = useState(null) // { x, y, district } in screen coords
+  const [hover, setHover] = useState(null) // { x, y, geoid }
 
-  const tierField = tierMode === 'hn' ? 'tier_hn' : 'tier_overall'
-  const ratioField = tierMode === 'hn' ? 'ratio_0_9_hn' : 'ratio_0_9'
-
-  // Build a geoid → district lookup so paint and tooltips don't iterate the array on every event
+  // Year's data, keyed by geoid
   const byGeoid = useMemo(() => {
     const m = new Map()
-    for (const d of districts) m.set(d.school_district_geoid, d)
+    for (const r of (panelByYear.get(year) || [])) m.set(r.school_district_geoid, r)
     return m
-  }, [districts])
+  }, [panelByYear, year])
 
   // Initialize map once
   useEffect(() => {
@@ -73,7 +82,7 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
 
     map.on('load', async () => {
       try {
-        const res = await fetch('/composite_unsd_elsd.geojson')
+        const res = await fetch('/composite_simplified.geojson')
         if (!res.ok) throw new Error(`GeoJSON fetch failed: ${res.status}`)
         const geojson = await res.json()
         geojsonRef.current = geojson
@@ -86,7 +95,7 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
           source: 'districts',
           paint: {
             'fill-color': NO_DATA_COLOR,
-            'fill-opacity': 0.75,
+            'fill-opacity': 0.78,
           },
         })
 
@@ -95,8 +104,9 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
           type: 'line',
           source: 'districts',
           paint: {
-            'line-color': '#1F2937',
-            'line-width': 0.4,
+            'line-color': '#FFFFFF',
+            'line-width': 0.6,
+            'line-opacity': 0.85,
           },
         })
 
@@ -124,7 +134,7 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
     }
   }, [])
 
-  // Repaint when districts or tier mode change
+  // Repaint when the data changes
   useEffect(() => {
     const map = mapRef.current
     if (!map || !styleReady) return
@@ -134,26 +144,46 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
       return
     }
 
+    // Build a match expression: geoid → tier color
     const stops = []
     for (const [geoid, d] of byGeoid) {
-      stops.push(geoid, getTierColor(d[tierField]))
+      const t = tierOf(d)
+      stops.push(geoid, t == null ? NO_DATA_COLOR : getTierColor(t))
     }
     map.setPaintProperty('districts-fill', 'fill-color', [
-      'match',
-      ['get', 'GEOID'],
-      ...stops,
-      NO_DATA_COLOR,
+      'match', ['get', 'GEOID'], ...stops, NO_DATA_COLOR,
     ])
-  }, [byGeoid, tierField, styleReady])
+  }, [byGeoid, tierOf, styleReady])
 
-  // Selected-district outline
+  // Selection outline
   useEffect(() => {
     const map = mapRef.current
     if (!map || !styleReady) return
     map.setFilter('districts-selected', ['==', ['get', 'GEOID'], selectedGeoid || '__none__'])
   }, [selectedGeoid, styleReady])
 
-  // Fit bounds to current selection: district > county filter > default CT view
+  // Dim non-focused districts (county filter) AND highlight selected
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !styleReady) return
+
+    let opacityExpr = 0.78
+    if (selectedGeoid) {
+      opacityExpr = ['case',
+        ['==', ['get', 'GEOID'], selectedGeoid], 0.92,
+        0.35,
+      ]
+    } else if (countyFiltered && visibleGeoids !== 'all') {
+      const arr = [...visibleGeoids]
+      opacityExpr = ['case',
+        ['in', ['get', 'GEOID'], ['literal', arr]], 0.85,
+        0.12,
+      ]
+    }
+    map.setPaintProperty('districts-fill', 'fill-opacity', opacityExpr)
+  }, [selectedGeoid, countyFiltered, visibleGeoids, styleReady])
+
+  // Fit bounds when selection / county filter changes
   useEffect(() => {
     const map = mapRef.current
     if (!map || !styleReady || !geojsonRef.current) return
@@ -162,8 +192,8 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
     if (selectedGeoid) {
       const f = geojsonRef.current.features.find(f => f.properties.GEOID === selectedGeoid)
       if (f) features = [f]
-    } else if (countyFiltered) {
-      features = geojsonRef.current.features.filter(f => byGeoid.has(f.properties.GEOID))
+    } else if (countyFiltered && visibleGeoids !== 'all') {
+      features = geojsonRef.current.features.filter(f => visibleGeoids.has(f.properties.GEOID))
     }
 
     if (features.length === 0) {
@@ -173,7 +203,7 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
     const b = featureBounds(features)
     if (!b) return
     map.fitBounds(b, { padding: 60, duration: 700, maxZoom: 11, essential: true })
-  }, [selectedGeoid, countyFiltered, byGeoid, styleReady])
+  }, [selectedGeoid, countyFiltered, visibleGeoids, styleReady])
 
   // Hover + click
   useEffect(() => {
@@ -183,25 +213,15 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
     function onMove(e) {
       const f = e.features?.[0]
       if (!f) { setHover(null); map.getCanvas().style.cursor = ''; return }
-      const geoid = f.properties.GEOID
-      const d = byGeoid.get(geoid)
-      const name = d?.school_district_name || f.properties.NAME || geoid
       map.getCanvas().style.cursor = 'pointer'
-      setHover({
-        x: e.point.x,
-        y: e.point.y,
-        name,
-        district: d || null,
-      })
+      setHover({ x: e.point.x, y: e.point.y, geoid: f.properties.GEOID })
     }
-    function onLeave() {
-      setHover(null)
-      map.getCanvas().style.cursor = ''
-    }
+    function onLeave() { setHover(null); map.getCanvas().style.cursor = '' }
     function onClick(e) {
       const f = e.features?.[0]
       if (!f) return
-      onSelectDistrict(f.properties.GEOID)
+      const g = f.properties.GEOID
+      onSelectDistrict(selectedGeoid === g ? null : g)
     }
 
     map.on('mousemove', 'districts-fill', onMove)
@@ -212,128 +232,91 @@ export default function MapView({ districts, tierMode, selectedGeoid, onSelectDi
       map.off('mouseleave', 'districts-fill', onLeave)
       map.off('click', 'districts-fill', onClick)
     }
-  }, [byGeoid, onSelectDistrict, styleReady])
+  }, [styleReady, onSelectDistrict, selectedGeoid])
 
-  return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg border border-gray-200 bg-white">
-      <div ref={containerRef} className="absolute inset-0" />
-      <Legend tierMode={tierMode} />
-      {hover && <Tooltip {...hover} tierMode={tierMode} />}
-    </div>
-  )
-}
-
-const SD_TYPE_LABEL = {
-  unsd: 'Unified School District',
-  elsd: 'Elementary School District',
-}
-
-const fmtInt = n => (n == null || isNaN(n)) ? '—' : Math.round(n).toLocaleString('en-US')
-const fmtBpc = n => (n == null || isNaN(n)) ? '—' : n.toFixed(3)
-const fmtPct = n => (n == null || isNaN(n)) ? '—' : `${Math.round(n * 100)}%`
-
-function Tooltip({ x, y, name, district, tierMode }) {
-  const tier  = district ? (tierMode === 'hn' ? district.tier_hn : district.tier_overall) : null
-  const cfg   = TIER_CONFIG[tier] ?? TIER_CONFIG[null]
-  const hnActive = tierMode === 'hn'
+  const hoveredDistrict = hover ? byGeoid.get(hover.geoid) : null
 
   return (
     <div
-      className="pointer-events-none absolute z-20 w-[280px] rounded-lg border border-gray-200 bg-white text-xs shadow-xl"
-      style={{ left: x + 12, top: y + 12 }}
+      className="relative h-full w-full flex flex-col"
+      style={{
+        background: 'var(--color-background-primary)',
+        borderRadius: 'var(--radius-lg, 12px)',
+        border: '0.5px solid var(--color-border-tertiary)',
+        padding: 12,
+      }}
     >
-      {/* Header */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="text-sm font-semibold text-gray-900 leading-tight">{name}</div>
-        {district && (
-          <div className="mt-0.5 text-[11px] text-gray-500">
-            {[
-              SD_TYPE_LABEL[district.sd_type] || district.sd_type,
-              district.county,
-              district.year,
-            ].filter(Boolean).join(' · ')}
-          </div>
-        )}
+      <div className="flex items-baseline justify-between px-1 pb-2">
+        <h2 className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+          Reach by district, {year ?? '—'}
+          {countyFiltered && visibleGeoids !== 'all' && (
+            <span className="ml-1.5 font-normal" style={{ color: 'var(--color-text-tertiary)' }}>
+              · {visibleGeoids.size} districts
+            </span>
+          )}
+        </h2>
+        <span className="text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
+          {tierMode === 'hn' ? 'High-Needs' : 'Overall'}
+        </span>
       </div>
 
-      {/* Tier chip */}
-      <div className="px-3">
-        <div
-          className="rounded-md px-2.5 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide"
-          style={{ background: cfg.mapColor, color: cfg.textColor }}
-        >
-          Tier {tier ?? '—'} · {cfg.label}
-        </div>
-      </div>
+      <div ref={containerRef} className="relative flex-1 min-h-0" />
 
-      {/* Stats */}
-      {district ? (
-        <div className="mt-2 px-3 pb-3 space-y-1.5">
-          <Row
-            label="Books per child"
-            sublabel="3-year avg, ages 0–9"
-            value={fmtBpc(district.ratio_0_9)}
-            emphasis={!hnActive}
-          />
-          <Row
-            label="Books per high-needs child"
-            value={fmtBpc(district.ratio_0_9_hn)}
-            emphasis={hnActive}
-          />
-          <div className="border-t border-gray-100 pt-1.5 space-y-1.5">
-            <Row label="Books distributed (3-yr avg)" value={fmtInt(district.rolling_3yr_combined)} />
-            <Row label="Children ages 0–9"           value={fmtInt(district.census_pop_0_9)} />
-            <Row label="High-needs students"          value={fmtPct(district.doe_high_needs_pct)} />
-          </div>
-        </div>
-      ) : (
-        <div className="px-3 py-3 text-gray-500">
-          No data for this district in the selected year.
-        </div>
+      {hover && hoveredDistrict && (
+        <Tooltip x={hover.x} y={hover.y} d={hoveredDistrict} tierOf={tierOf} ratioOf={ratioOf} />
       )}
+
+      <Legend tierMode={tierMode} />
     </div>
   )
 }
 
-function Row({ label, sublabel, value, emphasis }) {
+function Tooltip({ x, y, d, tierOf, ratioOf }) {
+  const tier = tierOf(d)
+  const cfg  = TIER_CONFIG[tier] ?? TIER_CONFIG[null]
+  return (
+    <div
+      className="pointer-events-none absolute z-10 w-64 rounded-md border text-xs shadow-lg"
+      style={{
+        left: x + 12,
+        top: y + 12,
+        background: 'var(--color-background-primary)',
+        borderColor: 'var(--color-border-secondary)',
+      }}
+    >
+      <div className="px-3 pt-2.5 pb-1.5">
+        <div className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          {d.school_district_name}
+        </div>
+        <div className="text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
+          {[SD_TYPE_LABEL[d.sd_type] || d.sd_type, d.county].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+      <div className="px-3 pb-3">
+        <div
+          className="rounded px-2 py-1 text-center text-[11px] font-semibold"
+          style={{
+            background: cfg.mapColor === 'transparent' ? 'var(--color-background-secondary)' : cfg.mapColor,
+            color: cfg.textColor,
+            border: tier === 0 ? '1px solid var(--color-border-secondary)' : 'none',
+          }}
+        >
+          {tier == null ? 'No data' : `Tier ${tier} · ${cfg.label}`}
+        </div>
+        <div className="mt-2 space-y-0.5 text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+          <Row label="Books per child"  value={fmtBpc(ratioOf(d))} />
+          <Row label="Books (3-yr avg)" value={fmtInt(d.rolling_3yr_combined)} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Row({ label, value }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <div className="min-w-0">
-        <div className={emphasis ? 'text-gray-900 font-medium' : 'text-gray-700'}>{label}</div>
-        {sublabel && <div className="text-[10px] text-gray-400">{sublabel}</div>}
-      </div>
-      <div className={`font-mono tabular-nums ${emphasis ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>
-        {value}
-      </div>
-    </div>
-  )
-}
-
-function Legend({ tierMode }) {
-  const tiers = [0, 1, 2, 3, 4, 5]
-  return (
-    <div className="absolute bottom-3 left-3 z-10 rounded-md border border-gray-200 bg-white/95 p-3 text-xs shadow-sm">
-      <div className="mb-1 font-medium text-gray-700">
-        {tierMode === 'hn' ? 'High-Needs tier' : 'Overall tier'}
-      </div>
-      <div className="space-y-1">
-        {tiers.map(t => (
-          <div key={t} className="flex items-center gap-2">
-            <span
-              className="inline-block h-3 w-3 rounded-sm border border-gray-300"
-              style={{ background: TIER_CONFIG[t].mapColor }}
-            />
-            <span className="text-gray-700">{t} — {TIER_CONFIG[t].label}</span>
-          </div>
-        ))}
-        <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-          <span
-            className="inline-block h-3 w-3 rounded-sm border border-gray-200"
-            style={{ background: TIER_CONFIG[null].mapColor }}
-          />
-          <span className="text-gray-700">No data</span>
-        </div>
-      </div>
+      <span>{label}</span>
+      <span className="font-mono tabular-nums" style={{ color: 'var(--color-text-primary)' }}>{value}</span>
     </div>
   )
 }

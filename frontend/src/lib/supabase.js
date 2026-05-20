@@ -34,6 +34,13 @@ export async function apiFetch(path, options = {}) {
 
 // Public data helpers
 export const api = {
+  getPanel: (from, to) => {
+    const q = new URLSearchParams()
+    if (from != null) q.set('from', String(from))
+    if (to   != null) q.set('to',   String(to))
+    const s = q.toString()
+    return apiFetch(`/api/data/panel${s ? `?${s}` : ''}`)
+  },
   getYears: () => apiFetch('/api/data/years'),
   getDistricts: (year, county) => apiFetch(`/api/data/districts?year=${year}${county ? `&county=${county}` : ''}`),
   getDistrict: (geoid) => apiFetch(`/api/data/district/${geoid}`),
