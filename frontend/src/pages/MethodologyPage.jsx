@@ -38,6 +38,10 @@ export default function MethodologyPage() {
         <DataSourcesTable />
       </Section>
 
+      <Section title="Known limitations">
+        <KnownLimitations />
+      </Section>
+
       <Section title="Methodology decisions on record">
         <MethodologyDecisions />
       </Section>
@@ -81,6 +85,14 @@ function Intro() {
         The dashboard answers one question for each Connecticut school district:
         <strong> how many Read to Grow books were distributed per child living in the
         district, in a given year?</strong> We call this the <em>books-per-child ratio</em>.
+      </p>
+      <p>
+        <strong>What counts as a “Read to Grow book”:</strong> the dashboard currently
+        includes books distributed through the <strong>Bookmobile</strong> and{' '}
+        <strong>Books for Kids (BFK)</strong> programs only. Other Read to Grow initiatives
+        — events, in-clinic giveaways, third-party partnerships — are not represented
+        in these numbers. If a program isn’t exported from HUB with a Bookmobile or
+        BFK tag, it doesn’t appear here.
       </p>
       <p>
         The ratio is computed two ways:
@@ -462,6 +474,31 @@ function DataRow({ source, what, coverage, updated }) {
       <td className="py-2 pr-3" style={{ color: 'var(--color-text-secondary)' }}>{coverage}</td>
       <td className="py-2" style={{ color: 'var(--color-text-secondary)' }}>{updated}</td>
     </tr>
+  )
+}
+
+// ── Known limitations ──────────────────────────────────────────────────
+function KnownLimitations() {
+  return (
+    <>
+      <p>
+        <strong>Reach is measured by where books were distributed, not where the
+        children who received them live.</strong> Each distribution event is point-in-polygon
+        matched to one of the 158 school-district boundaries by its latitude and
+        longitude. Families regularly cross district lines — for libraries, schools,
+        clinics, and community events — so a district shown as <em>no reach</em> may still
+        have children who received Read to Grow books at a nearby distribution just
+        across the border. Conversely, a high-reach district’s ratio includes books
+        that ultimately ended up with children living elsewhere.
+      </p>
+      <p>
+        The dashboard is a faithful map of <em>distribution geography</em>, which is a useful
+        proxy for reach at the population level. It is not a per-child guarantee, and
+        district-level numbers should be interpreted with this caveat in mind —
+        especially for small towns and any district adjacent to a heavy distribution
+        site.
+      </p>
+    </>
   )
 }
 
