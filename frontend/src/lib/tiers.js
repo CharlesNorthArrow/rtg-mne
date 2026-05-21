@@ -74,6 +74,15 @@ export function preComputedTierField(metric, age) {
   return metric === 'hn' ? 'tier_hn' : 'tier_overall'
 }
 
+// Age-coefficient defaults. Same mirror pattern as TIER_THRESHOLDS: source of
+// truth is pipeline_config in Supabase. Mirror here if changed via /admin/config.
+// Invariant enforced by validateCoefficients: coeff_0_4 + coeff_5_9 = coeff_0_9.
+export const TIER_COEFFICIENTS = {
+  coeff_0_9: 0.80,
+  coeff_0_4: 0.48,
+  coeff_5_9: 0.32,
+}
+
 // Overall tier thresholds (reference — source of truth is pipeline_config in DB)
 export const OVERALL_THRESHOLDS = [
   { tier: 0, label: 'No reach',  range: '= 0' },
