@@ -9,7 +9,7 @@ import { TIER_CONFIG, TIER_KEYS, getTierColor } from '../../../lib/tiers.js'
 // drawn as a faint line overlay so the bar story and the volume story
 // can be read together.
 
-const HEIGHT     = 170
+const MIN_HEIGHT  = 170
 const PAD_TOP    = 14
 const PAD_BOTTOM = 26
 const PAD_LEFT   = 12
@@ -37,15 +37,18 @@ function niceCeiling(v) {
 
 export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
   const containerRef = useRef(null)
+  const svgBoxRef = useRef(null)
   const [width, setWidth] = useState(FALLBACK_W)
+  const [height, setHeight] = useState(MIN_HEIGHT)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!svgBoxRef.current) return
     const ro = new ResizeObserver(entries => {
-      const w = entries[0].contentRect.width
+      const { width: w, height: h } = entries[0].contentRect
       if (w > 0) setWidth(w)
+      if (h > 0) setHeight(Math.max(h, MIN_HEIGHT))
     })
-    ro.observe(containerRef.current)
+    ro.observe(svgBoxRef.current)
     return () => ro.disconnect()
   }, [])
 
@@ -84,16 +87,17 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
   }
 
   const plotW = Math.max(width - PAD_LEFT - PAD_RIGHT, 1)
-  const plotH = HEIGHT - PAD_TOP - PAD_BOTTOM
+  const plotH = height - PAD_TOP - PAD_BOTTOM
   const slotW = plotW / lifetime.length
   const barW  = Math.max(slotW - BAR_GAP, 1)
+  const baselineY = height - PAD_BOTTOM
 
   const xForYear = (year) => {
     const span = yMax - yMin
     if (span <= 0) return PAD_LEFT + plotW / 2
     return PAD_LEFT + ((year - yMin) / span) * plotW
   }
-  const yForBooks = (b) => (HEIGHT - PAD_BOTTOM) - (b / booksCeil) * plotH
+  const yForBooks = (b) => baselineY - (b / booksCeil) * plotH
 
   // Build line path, lifting pen across null / no-data years
   const linePath = useMemo(() => {
@@ -126,10 +130,11 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
 
   return (
     <Wrapper containerRef={containerRef} title={`Tier lifetime · ${yMin}–${yMax}`}>
+     <div ref={svgBoxRef} className="flex-1 min-h-0" style={{ minHeight: MIN_HEIGHT }}>
       <svg
-        viewBox={`0 0 ${width} ${HEIGHT}`}
+        viewBox={`0 0 ${width} ${height}`}
         width={width}
-        height={HEIGHT}
+        height={height}
         style={{ display: 'block' }}
       >
         <defs>
@@ -170,7 +175,7 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
             : plotH * ((tier + 1) / TIER_LEVELS)
           const cx = PAD_LEFT + (year - yMin + 0.5) * slotW
           const x  = cx - barW / 2
-          const y  = HEIGHT - PAD_BOTTOM - h
+          const y  = baselineY - h
           const fill = isMissing ? 'url(#lifetime-nodata)' : getTierColor(tier)
           const titleText = isNoData
             ? `${year} — no data`
@@ -222,7 +227,7 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
         {/* Right axis: books ticks (0 + ceiling). Sits in PAD_RIGHT margin. */}
         {hasAnyBooks && (
           <g fontFamily="system-ui, sans-serif" fontSize="9" fill={BOOKS_AXIS_COLOR}>
-            <text x={width - PAD_RIGHT + 4} y={HEIGHT - PAD_BOTTOM + 3} textAnchor="start">
+            <text x={width - PAD_RIGHT + 4} y={baselineY + 3} textAnchor="start">
               0
             </text>
             <text x={width - PAD_RIGHT + 4} y={PAD_TOP + 3} textAnchor="start">
@@ -247,7 +252,7 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
             x1={xForYear(selectedYear)}
             x2={xForYear(selectedYear)}
             y1={PAD_TOP - 4}
-            y2={HEIGHT - PAD_BOTTOM}
+            y2={baselineY}
             stroke="#374151"
             strokeWidth="1"
             strokeDasharray="3 3"
@@ -258,8 +263,8 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
         <line
           x1={PAD_LEFT}
           x2={width - PAD_RIGHT}
-          y1={HEIGHT - PAD_BOTTOM}
-          y2={HEIGHT - PAD_BOTTOM}
+          y1={baselineY}
+          y2={baselineY}
           stroke="#9CA3AF"
           strokeWidth="1"
         />
@@ -272,14 +277,14 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
               <line
                 x1={x}
                 x2={x}
-                y1={HEIGHT - PAD_BOTTOM}
-                y2={HEIGHT - PAD_BOTTOM + 4}
+                y1={baselineY}
+                y2={baselineY + 4}
                 stroke="#9CA3AF"
                 strokeWidth="1"
               />
               <text
                 x={x}
-                y={HEIGHT - PAD_BOTTOM + 16}
+                y={baselineY + 16}
                 fontSize="11"
                 fill="#6B7280"
                 textAnchor="middle"
@@ -291,6 +296,7 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
           )
         })}
       </svg>
+     </div>
 
       <LifetimeLegend hasBooks={hasAnyBooks} />
     </Wrapper>
@@ -307,7 +313,7 @@ function Wrapper({ containerRef, title, children }) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col px-4 py-3"
+      className="flex flex-1 min-h-0 flex-col px-4 py-3"
       style={{
         background: 'var(--color-background-primary)',
         borderRadius: 'var(--radius-md, 8px)',

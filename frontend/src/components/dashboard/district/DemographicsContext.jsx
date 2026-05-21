@@ -121,7 +121,7 @@ export default function DemographicsContext({ demographics, age, year }) {
   }), [baseOptions])
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="flex flex-1 min-h-0 gap-3">
       <Mini title="High-needs share over time" empty={!hasAnyHn}>
         <Line data={hnData} options={hnOptions} />
       </Mini>
@@ -144,19 +144,18 @@ export default function DemographicsContext({ demographics, age, year }) {
 function Mini({ title, empty, legend, children }) {
   return (
     <div
-      className="flex flex-col px-3 py-2"
+      className="flex flex-1 min-h-0 flex-col px-3 py-2"
       style={{
         background: 'var(--color-background-primary)',
         borderRadius: 'var(--radius-md, 8px)',
         border: '0.5px solid var(--color-border-tertiary)',
-        minHeight: 0,
       }}
     >
       <div className="flex items-center justify-between">
         <div className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>{title}</div>
         {legend}
       </div>
-      <div className="mt-1 flex-1 min-h-0" style={{ height: 110 }}>
+      <div className="mt-1 flex-1 min-h-0" style={{ minHeight: 110 }}>
         {empty ? (
           <div className="flex h-full items-center justify-center text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
             No data
