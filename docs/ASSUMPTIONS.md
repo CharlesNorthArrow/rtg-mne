@@ -61,6 +61,20 @@ rendered distinctly. `tier = 0` is a real measurement (we know the
 population and saw zero books). `tier = NULL` means the denominator is
 unavailable and reach cannot be computed.
 
+### Zero-reach across slices
+
+When `rolling_3yr_combined = 0` and `census_pop_0_9 > 0`, **all six ratios**
+(Overall and HN × ages 0–4 / 0–9 / 5–9) are 0, even if a slice-specific
+denominator (HN %, age subset) is unavailable. The interpretation is "zero
+books reached anyone in this district, including high-needs children" — a
+real measurement given that we know the district has children.
+`tier_overall = 0` and `tier_hn = 0` follow.
+
+This generalises the three-state table above: "demographics present" for
+HN purposes is satisfied by `census_pop_0_9 > 0`, not strictly by
+`census + DoE`. The math fix lives in `computeRatios` in
+`backend/src/services/pipeline.js` (search for `zeroReach`).
+
 ### Scope cap
 
 The cross-product extends **only** over 2009–2024. Years before 2009 lack

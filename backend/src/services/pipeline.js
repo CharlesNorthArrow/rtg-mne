@@ -35,12 +35,19 @@ export function computeRatios(row, config) {
     return num / den
   }
 
-  const ratio_0_9    = safe(books * config.coeff_0_9, p09)
-  const ratio_0_4    = safe(books * config.coeff_0_4, p04)
-  const ratio_5_9    = safe(books * config.coeff_5_9, p59)
-  const ratio_0_9_hn = safe(books * config.coeff_0_9, p09 && hn ? p09 * hn : null)
-  const ratio_0_4_hn = safe(books * config.coeff_0_4, p04 && hn ? p04 * hn : null)
-  const ratio_5_9_hn = safe(books * config.coeff_5_9, p59 && hn ? p59 * hn : null)
+  // G1+D2 zero-reach sub-rule (see docs/ASSUMPTIONS.md §G1+D2):
+  // zero books reach zero of anyone — including high-needs children — so
+  // all six ratios are 0 when rolling=0 and we know the district has
+  // children. The slice-specific denominator (HN %, age subset) being
+  // unavailable does NOT make zero-reach unmeasurable.
+  const zeroReach = (books === 0 && p09 != null && p09 > 0)
+
+  const ratio_0_9    = zeroReach ? 0 : safe(books * config.coeff_0_9, p09)
+  const ratio_0_4    = zeroReach ? 0 : safe(books * config.coeff_0_4, p04)
+  const ratio_5_9    = zeroReach ? 0 : safe(books * config.coeff_5_9, p59)
+  const ratio_0_9_hn = zeroReach ? 0 : safe(books * config.coeff_0_9, p09 && hn ? p09 * hn : null)
+  const ratio_0_4_hn = zeroReach ? 0 : safe(books * config.coeff_0_4, p04 && hn ? p04 * hn : null)
+  const ratio_5_9_hn = zeroReach ? 0 : safe(books * config.coeff_5_9, p59 && hn ? p59 * hn : null)
 
   return {
     ratio_0_9,

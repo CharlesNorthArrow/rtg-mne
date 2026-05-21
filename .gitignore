@@ -25,3 +25,5 @@ yarn-error.log*
 
 # Stray scaffolding directories (from a bad shell brace expansion)
 {frontend
+
+.vercel
