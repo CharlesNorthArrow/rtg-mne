@@ -247,34 +247,61 @@ function ThreeStateRule() {
 }
 
 function ThreeStateRow({ books, demo, tier, meaning }) {
-  const cfg = tier == null ? null : TIER_CONFIG[tier]
   return (
     <tr className="border-t" style={{ borderColor: 'var(--color-border-tertiary)' }}>
       <td className="py-1.5">{books}</td>
       <td className="py-1.5">{demo}</td>
-      <td className="py-1.5">
-        {cfg ? (
-          <span
-            className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
-            style={{ background: cfg.mapColor, color: cfg.textColor }}
-          >
-            {tier === '1–5' ? 'T1–T5' : `T${tier} · ${cfg.label}`}
-          </span>
-        ) : (
-          <span
-            className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
-            style={{
-              backgroundImage: NO_DATA_HATCH,
-              color: 'var(--color-text-secondary)',
-              border: '0.5px solid var(--color-border-tertiary)',
-            }}
-          >
-            No data
-          </span>
-        )}
-      </td>
+      <td className="py-1.5"><TierStateChip tier={tier} /></td>
       <td className="py-1.5">{meaning}</td>
     </tr>
+  )
+}
+
+function TierStateChip({ tier }) {
+  // Special case: "1–5" means "whatever the math produces" — render the
+  // diverging T1–T5 palette as a banded swatch so the row visually shows
+  // "a real measured tier".
+  if (tier === '1–5') {
+    return (
+      <span className="inline-flex items-center gap-1.5 align-middle">
+        <span className="inline-flex overflow-hidden rounded" style={{ border: '0.5px solid var(--color-border-tertiary)' }}>
+          {[1, 2, 3, 4, 5].map(t => (
+            <span
+              key={t}
+              className="inline-block"
+              style={{ width: 12, height: 14, background: TIER_CONFIG[t].mapColor }}
+              title={`T${t} · ${TIER_CONFIG[t].label}`}
+            />
+          ))}
+        </span>
+        <span className="text-[11px] font-medium">T1–T5</span>
+      </span>
+    )
+  }
+
+  if (tier == null) {
+    return (
+      <span
+        className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
+        style={{
+          backgroundImage: NO_DATA_HATCH,
+          color: 'var(--color-text-secondary)',
+          border: '0.5px solid var(--color-border-tertiary)',
+        }}
+      >
+        No data
+      </span>
+    )
+  }
+
+  const cfg = TIER_CONFIG[tier]
+  return (
+    <span
+      className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
+      style={{ background: cfg.mapColor, color: cfg.textColor }}
+    >
+      T{tier} · {cfg.label}
+    </span>
   )
 }
 
