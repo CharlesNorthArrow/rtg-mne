@@ -16,6 +16,7 @@ import MapView from '../components/dashboard/MapView.jsx'
 import KpiStrip from '../components/dashboard/KpiStrip.jsx'
 import TierDistribution from '../components/dashboard/TierDistribution.jsx'
 import Progression from '../components/dashboard/Progression.jsx'
+import DistrictPanel from '../components/dashboard/district/DistrictPanel.jsx'
 
 export default function DashboardPage() {
   useDashboardUrlSync()
@@ -112,6 +113,27 @@ export default function DashboardPage() {
     if (!visibleGeoids.has(selectedGeoid)) setSelected(null)
   }, [visibleGeoids, selectedGeoid, setSelected])
 
+  // Escape clears the selected district (drop-back to snapshot mode)
+  useEffect(() => {
+    if (!selectedGeoid) return
+    function onKey(e) { if (e.key === 'Escape') setSelected(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedGeoid, setSelected])
+
+  // H8 — proxy badge info for the currently-selected year. Render only if ANY
+  // visible row in the selected year is using a carried-forward census vintage.
+  const proxyInfo = useMemo(() => {
+    if (year == null) return null
+    const rows = rowsByYear.get(year) || []
+    const filtered = visibleGeoids === 'all'
+      ? rows
+      : rows.filter(r => visibleGeoids.has(r.school_district_geoid))
+    const proxied = filtered.find(r => r.census_is_proxy)
+    if (!proxied) return null
+    return { sourceYear: proxied.census_source_year }
+  }, [rowsByYear, year, visibleGeoids])
+
   const kpis = useMemo(() => kpisFor({
     rowsByYear, year, visibleSet: visibleGeoids, tierOf, ratioOf,
   }), [rowsByYear, year, visibleGeoids, tierOf, ratioOf])
@@ -171,6 +193,7 @@ export default function DashboardPage() {
         onDistrictSelect={setSelected}
         isPlaying={isPlaying}
         onPlayPauseToggle={setIsPlaying}
+        proxyInfo={proxyInfo}
       />
 
       <div className="flex flex-1 min-h-0 gap-3">
@@ -189,35 +212,25 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-3">
-          {selectedGeoid && (
-            <div
-              className="flex items-center justify-between px-3 py-2 text-xs"
-              style={{
-                background: 'var(--color-background-secondary)',
-                borderRadius: 'var(--radius-md, 8px)',
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              <span>
-                District selected · <strong style={{ color: 'var(--color-text-primary)' }}>
-                  {districtsList.find(d => d.school_district_geoid === selectedGeoid)?.school_district_name ?? selectedGeoid}
-                </strong>
-              </span>
-              <button
-                onClick={() => setSelected(null)}
-                className="rounded px-2 py-1 hover:bg-white"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Back to overview
-              </button>
-            </div>
+          {selectedGeoid ? (
+            <DistrictPanel
+              panel={panel}
+              geoid={selectedGeoid}
+              year={year}
+              age={age}
+              tierOf={tierOf}
+              ratioOf={ratioOf}
+              onClose={() => setSelected(null)}
+            />
+          ) : (
+            <>
+              <KpiStrip kpis={kpis} onPickDistrict={setSelected} />
+              <TierDistribution year={year} dist={tierDist} />
+              <div className="flex-1 min-h-0">
+                <Progression progression={progression} year={year} label={progressionLabel} />
+              </div>
+            </>
           )}
-
-          <KpiStrip kpis={kpis} onPickDistrict={setSelected} />
-          <TierDistribution year={year} dist={tierDist} />
-          <div className="flex-1 min-h-0">
-            <Progression progression={progression} year={year} label={progressionLabel} />
-          </div>
         </div>
       </div>
     </div>

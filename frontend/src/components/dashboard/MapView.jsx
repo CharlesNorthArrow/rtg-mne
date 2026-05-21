@@ -4,20 +4,28 @@ import { TIER_CONFIG, getTierColor } from '../../lib/tiers.js'
 import { fmtBpc, fmtInt, SD_TYPE_LABEL } from '../../lib/format.js'
 import Legend from './Legend.jsx'
 
-// OSM raster basemap. TODO: swap for a managed tile provider before production —
-// OSM's tile.openstreetmap.org isn't licensed for heavy app traffic.
+// Neutral, no-labels raster basemap. Carto's "light_nolabels" is essentially
+// land/water + minor roads in pale grey — no place names, no transit, no
+// strong colour. Free for use under their attribution requirement.
 const BASE_STYLE = {
   version: 8,
   sources: {
-    osm: {
+    carto: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: [
+        'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
+        'https://d.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
+      ],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution: '© OpenStreetMap contributors © CARTO',
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.5 } }],
+  layers: [{ id: 'carto', type: 'raster', source: 'carto', paint: { 'raster-opacity': 0.75 } }],
 }
+
+const HIGHLIGHT_COLOR = '#243A78' // RTG brand blue
 
 const CT_CENTER = [-72.7, 41.55]
 const CT_ZOOM   = 7.7
@@ -77,7 +85,6 @@ export default function MapView({
       zoom: CT_ZOOM,
       attributionControl: { compact: true },
     })
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     mapRef.current = map
 
     map.on('load', async () => {
@@ -115,7 +122,7 @@ export default function MapView({
           type: 'line',
           source: 'districts',
           paint: {
-            'line-color': '#111827',
+            'line-color': HIGHLIGHT_COLOR,
             'line-width': 3,
           },
           filter: ['==', ['get', 'GEOID'], '__none__'],

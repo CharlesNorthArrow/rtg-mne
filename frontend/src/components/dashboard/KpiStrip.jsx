@@ -63,12 +63,22 @@ export default function KpiStrip({ kpis, onPickDistrict }) {
 }
 
 function DeltaBlock({ delta }) {
-  if (!delta) return <div className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>—</div>
-  const color = SIGN_COLOR[delta.sign]
   return (
     <div className="text-right tabular-nums">
-      <div className="text-[12px] font-medium leading-tight" style={{ color }}>{delta.abs}</div>
-      <div className="text-[10px] leading-tight" style={{ color }}>{delta.pct}</div>
+      <div
+        className="text-[9px] uppercase leading-tight"
+        style={{ color: 'var(--color-text-tertiary)', letterSpacing: '0.04em' }}
+      >
+        vs last year
+      </div>
+      {delta ? (
+        <>
+          <div className="text-[12px] font-medium leading-tight" style={{ color: SIGN_COLOR[delta.sign] }}>{delta.abs}</div>
+          <div className="text-[10px] leading-tight" style={{ color: SIGN_COLOR[delta.sign] }}>{delta.pct}</div>
+        </>
+      ) : (
+        <div className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>—</div>
+      )}
     </div>
   )
 }

@@ -23,6 +23,7 @@ router.get('/panel', async (req, res) => {
     'books_combined', 'rolling_3yr_combined',
     'doe_total_enrollment', 'doe_high_needs_count', 'doe_high_needs_pct',
     'census_pop_0_4', 'census_pop_5_9', 'census_pop_0_9',
+    'census_source_year', 'census_is_proxy',
     'ratio_0_9', 'ratio_0_4', 'ratio_5_9',
     'ratio_0_9_hn', 'ratio_0_4_hn', 'ratio_5_9_hn',
     'tier_overall', 'tier_hn',

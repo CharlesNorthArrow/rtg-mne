@@ -1,23 +1,23 @@
 import { TIER_CONFIG, TIER_KEYS } from '../../lib/tiers.js'
 
-export default function Legend({ tierMode = 'overall' }) {
+export default function Legend() {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
-      <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-        {tierMode === 'hn' ? 'High-Needs tier' : 'Overall tier'}
-      </span>
+    <div
+      className="mt-2 flex flex-nowrap items-center justify-between gap-x-2 px-1 text-[11px] whitespace-nowrap overflow-hidden"
+      style={{ color: 'var(--color-text-secondary)' }}
+    >
       {TIER_KEYS.map(t => (
-        <span key={t} className="inline-flex items-center gap-1.5">
+        <span key={t} className="inline-flex items-center gap-1">
           <span
-            className="inline-block h-3 w-3 rounded-sm"
+            className="inline-block h-2.5 w-2.5 rounded-sm shrink-0"
             style={{ background: TIER_CONFIG[t].mapColor }}
           />
-          T{t} — {TIER_CONFIG[t].label}
+          T{t} | {TIER_CONFIG[t].label}
         </span>
       ))}
-      <span className="inline-flex items-center gap-1.5">
+      <span className="inline-flex items-center gap-1">
         <span
-          className="inline-block h-3 w-3 rounded-sm"
+          className="inline-block h-2.5 w-2.5 rounded-sm shrink-0"
           style={{
             background: 'transparent',
             backgroundImage:

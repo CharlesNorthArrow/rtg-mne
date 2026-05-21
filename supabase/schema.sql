@@ -23,6 +23,8 @@ CREATE TABLE district_tiers (
   census_pop_0_4          NUMERIC,
   census_pop_5_9          NUMERIC,
   census_pop_0_9          NUMERIC,
+  census_source_year      SMALLINT,
+  census_is_proxy         BOOLEAN NOT NULL DEFAULT FALSE,
   ratio_0_9               NUMERIC,
   ratio_0_4               NUMERIC,
   ratio_5_9               NUMERIC,

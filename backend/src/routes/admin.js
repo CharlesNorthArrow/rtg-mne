@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { point } from '@turf/helpers'
 import { adminSupabase } from '../lib/supabase.js'
-import { computeRatios, computeRollingAvg, validateCoefficients } from '../services/pipeline.js'
+import { applyProxyCensus, computeRatios, computeRollingAvg, validateCoefficients } from '../services/pipeline.js'
 
 const router = Router()
 const upload = multer({ dest: '/tmp/rtg-uploads/' })
@@ -191,6 +191,11 @@ router.post('/upload-books', upload.single('file'), async (req, res) => {
 
     if (upsertError) throw upsertError
 
+    // H8 — fill in proxied census for the new year if its ACS vintage isn't out yet
+    const proxyStats = await applyProxyCensus({
+      supabase: adminSupabase, year: targetYear, config,
+    })
+
     const summary = {
       year: targetYear,
       districtsWithBooks: Object.keys(agg).length,
@@ -198,6 +203,7 @@ router.post('/upload-books', upload.single('file'), async (req, res) => {
       pointsMatched: matched.length,
       pointsUnmatched: unmatched.length,
       unmatchedPct: ((unmatched.length / filtered.length) * 100).toFixed(1),
+      censusProxy: proxyStats,
     }
 
     await logRun('books_upload', req.user, 'success', summary)
@@ -404,6 +410,8 @@ router.post('/census-refresh', async (req, res) => {
         census_pop_0_4: pop_0_4,
         census_pop_5_9: pop_5_9,
         census_pop_0_9: pop_0_9,
+        census_source_year: targetYear,
+        census_is_proxy: false,
         ...ratios,
       })
     }
@@ -414,7 +422,26 @@ router.post('/census-refresh', async (req, res) => {
 
     if (upsertError) throw upsertError
 
-    const summary = { vintageYear: targetYear, districtsUpdated: upsertRows.length }
+    // H8 — for any year > targetYear (e.g. 2025 when vintage = 2024) where rows
+    // still have books but no census, carry forward.
+    const { data: laterYears } = await adminSupabase
+      .from('district_tiers')
+      .select('year')
+      .gt('year', targetYear)
+      .is('census_pop_0_9', null)
+      .not('rolling_3yr_combined', 'is', null)
+
+    const proxyByYear = {}
+    const yearsToProxy = [...new Set((laterYears || []).map(r => r.year))].sort((a, b) => a - b)
+    for (const y of yearsToProxy) {
+      proxyByYear[y] = await applyProxyCensus({ supabase: adminSupabase, year: y, config })
+    }
+
+    const summary = {
+      vintageYear: targetYear,
+      districtsUpdated: upsertRows.length,
+      censusProxy: proxyByYear,
+    }
     await logRun('census_refresh', req.user, 'success', summary)
     res.json(summary)
 
@@ -454,14 +481,29 @@ router.put('/config', async (req, res) => {
     ...computeRatios(row, fullConfig),
   }))
 
-  // Upsert in batches
+  // Upsert in batches. Note: payload omits census_pop_*, census_is_proxy,
+  // and census_source_year, so those columns are preserved on proxied rows —
+  // ratios above were computed from the (carried-forward) census values
+  // already in the DB.
   for (let i = 0; i < recalcRows.length; i += 500) {
     await adminSupabase
       .from('district_tiers')
       .upsert(recalcRows.slice(i, i + 500), { onConflict: 'school_district_geoid,year' })
   }
 
-  const summary = { rowsRecalculated: recalcRows.length, config: newConfig }
+  // H8 — re-apply proxy carry-forward for any years still missing census after recompute
+  const { data: gapYears } = await adminSupabase
+    .from('district_tiers')
+    .select('year')
+    .is('census_pop_0_9', null)
+    .not('rolling_3yr_combined', 'is', null)
+  const yearsToProxy = [...new Set((gapYears || []).map(r => r.year))].sort((a, b) => a - b)
+  const proxyByYear = {}
+  for (const y of yearsToProxy) {
+    proxyByYear[y] = await applyProxyCensus({ supabase: adminSupabase, year: y, config: fullConfig })
+  }
+
+  const summary = { rowsRecalculated: recalcRows.length, config: newConfig, censusProxy: proxyByYear }
   await logRun('config_change', req.user, 'success', summary)
   res.json(summary)
 })

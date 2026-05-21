@@ -20,6 +20,7 @@ export default function ControlStrip({
   onDistrictSelect,
   isPlaying,
   onPlayPauseToggle,
+  proxyInfo,
 }) {
   return (
     <div
@@ -48,6 +49,7 @@ export default function ControlStrip({
         onYearChange={onYearChange}
         isPlaying={isPlaying}
         onPlayPauseToggle={onPlayPauseToggle}
+        proxyInfo={proxyInfo}
       />
     </div>
   )
@@ -270,7 +272,7 @@ function Segmented({ options, value, onChange }) {
 }
 
 // ── Playback (▶ + year slider) ─────────────────────────────────────────
-function Playback({ yearRange, year, onYearChange, isPlaying, onPlayPauseToggle }) {
+function Playback({ yearRange, year, onYearChange, isPlaying, onPlayPauseToggle, proxyInfo }) {
   const { min, max } = yearRange
   const yearRef = useRef(year)
   yearRef.current = year
@@ -319,6 +321,15 @@ function Playback({ yearRange, year, onYearChange, isPlaying, onPlayPauseToggle 
       >
         {year ?? '—'}
       </span>
+      {proxyInfo && (
+        <span
+          className="shrink-0 text-[9px]"
+          style={{ color: 'var(--color-text-tertiary)' }}
+          title="ACS vintage for this year is not yet released. Denominator carried forward from the most recent vintage."
+        >
+          Census {proxyInfo.sourceYear}
+        </span>
+      )}
     </div>
   )
 }
