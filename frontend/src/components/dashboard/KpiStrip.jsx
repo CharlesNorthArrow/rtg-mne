@@ -42,19 +42,22 @@ export default function KpiStrip({ kpis, onPickDistrict }) {
       {/* Row 2 — two list cards */}
       <div className="grid grid-cols-2 gap-2">
         <ListCard
-          label="High reach (T4–5)"
-          count={c?.high}
-          delta={p && c ? fmtDeltaParts(c.high, p.high, 'int') : null}
-          listLabel="Top 5 by ratio"
-          items={kpis.top}
-          onPick={onPickDistrict}
-        />
-        <ListCard
           label="Low reach (T0–1)"
           count={c?.low}
           delta={p && c ? fmtDeltaParts(c.low, p.low, 'int') : null}
+          goodWhen="down"
+          tint="rgba(178, 24, 43, 0.06)"
           listLabel="Bottom 5 by ratio"
           items={kpis.bottom}
+          onPick={onPickDistrict}
+        />
+        <ListCard
+          label="High reach (T4–5)"
+          count={c?.high}
+          delta={p && c ? fmtDeltaParts(c.high, p.high, 'int') : null}
+          tint="rgba(33, 102, 172, 0.06)"
+          listLabel="Top 5 by ratio"
+          items={kpis.top}
           onPick={onPickDistrict}
         />
       </div>
@@ -118,12 +121,12 @@ function Card({ label, primary, secondary, delta }) {
   )
 }
 
-function ListCard({ label, count, delta, listLabel, items, onPick }) {
+function ListCard({ label, count, delta, listLabel, items, onPick, goodWhen = 'up', tint }) {
   return (
     <div
       className="flex gap-3 px-3 py-2"
       style={{
-        background: 'var(--color-background-secondary)',
+        background: tint || 'var(--color-background-secondary)',
         borderRadius: 'var(--radius-md, 8px)',
       }}
     >
@@ -144,7 +147,7 @@ function ListCard({ label, count, delta, listLabel, items, onPick }) {
           </div>
         </div>
         <div className="mt-0.5">
-          <DeltaBlockLeft delta={delta} />
+          <DeltaBlockLeft delta={delta} goodWhen={goodWhen} />
         </div>
       </div>
 
@@ -190,9 +193,15 @@ function ListCard({ label, count, delta, listLabel, items, onPick }) {
 
 // In ListCard the delta sits below the count and aligns left (not right) so it
 // reads as part of the indicator stack.
-function DeltaBlockLeft({ delta }) {
+// goodWhen='up' (default): positive change is good (green). goodWhen='down':
+// positive change is bad (red) — used by the Low-reach card where more
+// districts in low reach is a negative outcome.
+function DeltaBlockLeft({ delta, goodWhen = 'up' }) {
   if (!delta) return <div className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>—</div>
-  const color = SIGN_COLOR[delta.sign]
+  const semanticSign = goodWhen === 'down' && delta.sign !== 'neutral'
+    ? (delta.sign === 'positive' ? 'negative' : 'positive')
+    : delta.sign
+  const color = SIGN_COLOR[semanticSign]
   return (
     <div className="tabular-nums">
       <span className="text-[11px] font-medium" style={{ color }}>{delta.abs}</span>
