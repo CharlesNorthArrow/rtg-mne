@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url'
 import Papa from 'papaparse'
 import { adminSupabase } from '../src/lib/supabase.js'
 import { computeRatios } from '../src/services/pipeline.js'
+import { fetchAll } from './_lib.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -68,21 +69,6 @@ for (const r of censusRows) {
 console.log(`Census CSV: ${census.size} (geoid, year) cells in [${YEAR_MIN}-${YEAR_MAX}]`)
 
 // ── 3) Load existing DB rows for 2009-2024 ─────────────────────────────
-async function fetchAll(query) {
-  const PAGE = 1000
-  const out = []
-  let offset = 0
-  while (true) {
-    const { data, error } = await query.range(offset, offset + PAGE - 1)
-    if (error) throw error
-    if (!data || data.length === 0) break
-    out.push(...data)
-    if (data.length < PAGE) break
-    offset += PAGE
-  }
-  return out
-}
-
 const existing = await fetchAll(
   adminSupabase
     .from('district_tiers')

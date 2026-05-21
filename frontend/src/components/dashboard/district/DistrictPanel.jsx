@@ -35,14 +35,13 @@ export default function DistrictPanel({
     [series, ratioOverallField, ratioHnField],
   )
 
-  // Current-year row (or null if district has no row for selected year)
+  // Current-year row, falling back to the most recent row if the district
+  // has no entry for `year`. Header identity, tier, and ratio all read off
+  // this single source.
   const currentRow = useMemo(
     () => series.find(r => r.year === year) ?? series[series.length - 1] ?? null,
     [series, year],
   )
-
-  // Fallback row for header identity (name, county, type, geoid) if currentRow null
-  const idRow = currentRow ?? series[series.length - 1] ?? null
 
   const tier  = currentRow ? tierOf(currentRow)  : null
   const ratio = currentRow ? ratioOf(currentRow) : null
@@ -50,7 +49,7 @@ export default function DistrictPanel({
   return (
     <div className="flex flex-col gap-3 min-h-0">
       <DistrictHeader
-        row={idRow ? { ...idRow, rolling_3yr_combined: currentRow?.rolling_3yr_combined } : null}
+        row={currentRow}
         tier={tier}
         ratio={ratio}
         lifetimeBooks={lifetimeBooks}

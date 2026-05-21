@@ -1,5 +1,6 @@
-import { TIER_CONFIG } from '../../../lib/tiers.js'
+import { getTierConfig } from '../../../lib/tiers.js'
 import { fmtBpc, fmtInt, countyShort, SD_TYPE_LABEL } from '../../../lib/format.js'
+import CensusProxyBadge from '../CensusProxyBadge.jsx'
 
 export default function DistrictHeader({ row, tier, ratio, lifetimeBooks, onClose }) {
   // `row` is the current-year row (may be null for picked districts with
@@ -10,7 +11,7 @@ export default function DistrictHeader({ row, tier, ratio, lifetimeBooks, onClos
   const geoid  = row?.school_district_geoid
   const books  = row?.rolling_3yr_combined
 
-  const cfg = TIER_CONFIG[tier] ?? TIER_CONFIG[null]
+  const cfg = getTierConfig(tier)
   const chipBg   = cfg.mapColor
   const chipText = cfg.textColor
 
@@ -32,12 +33,8 @@ export default function DistrictHeader({ row, tier, ratio, lifetimeBooks, onClos
             {[type, county, geoid].filter(Boolean).join(' · ')}
           </div>
           {row?.census_is_proxy && (
-            <div
-              className="mt-0.5 text-[9px]"
-              style={{ color: 'var(--color-text-tertiary)' }}
-              title="ACS vintage for this year is not yet released. Denominator carried forward from the most recent vintage."
-            >
-              Census {row.census_source_year}
+            <div className="mt-0.5">
+              <CensusProxyBadge sourceYear={row.census_source_year} />
             </div>
           )}
         </div>

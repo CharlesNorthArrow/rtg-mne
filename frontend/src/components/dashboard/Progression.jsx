@@ -10,35 +10,10 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { TIER_CONFIG, TIER_KEYS } from '../../lib/tiers.js'
+import { makeVerticalYearLinePlugin } from '../../lib/chartPlugins.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, ChartTooltip)
-
-// Custom plugin: dashed vertical line marking the currently selected year.
-const verticalYearLine = {
-  id: 'verticalYearLine',
-  afterDraw(chart) {
-    const opts = chart.options.plugins?.verticalYearLine
-    if (!opts || opts.year == null) return
-    const xs = chart.scales.x
-    const label = String(opts.year)
-    const idx = chart.data.labels.indexOf(label)
-    if (idx < 0) return
-    const x = xs.getPixelForTick(idx)
-    const { top, bottom } = chart.chartArea
-    const ctx = chart.ctx
-    ctx.save()
-    ctx.strokeStyle = '#6B7280'
-    ctx.lineWidth = 1
-    ctx.setLineDash([4, 4])
-    ctx.beginPath()
-    ctx.moveTo(x, top)
-    ctx.lineTo(x, bottom)
-    ctx.stroke()
-    ctx.restore()
-  },
-}
-
-ChartJS.register(verticalYearLine)
+ChartJS.register(makeVerticalYearLinePlugin('verticalYearLine'))
 
 export default function Progression({ progression, year, label }) {
   const { years, series } = progression

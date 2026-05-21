@@ -423,7 +423,7 @@ router.post('/census-refresh', async (req, res) => {
     if (upsertError) throw upsertError
 
     // H8 — for any year > targetYear (e.g. 2025 when vintage = 2024) where rows
-    // still have books but no census, carry forward.
+    // still have books but no census, carry forward. Years are independent.
     const { data: laterYears } = await adminSupabase
       .from('district_tiers')
       .select('year')
@@ -431,11 +431,11 @@ router.post('/census-refresh', async (req, res) => {
       .is('census_pop_0_9', null)
       .not('rolling_3yr_combined', 'is', null)
 
-    const proxyByYear = {}
     const yearsToProxy = [...new Set((laterYears || []).map(r => r.year))].sort((a, b) => a - b)
-    for (const y of yearsToProxy) {
-      proxyByYear[y] = await applyProxyCensus({ supabase: adminSupabase, year: y, config })
-    }
+    const proxyResults = await Promise.all(
+      yearsToProxy.map(y => applyProxyCensus({ supabase: adminSupabase, year: y, config }))
+    )
+    const proxyByYear = Object.fromEntries(yearsToProxy.map((y, i) => [y, proxyResults[i]]))
 
     const summary = {
       vintageYear: targetYear,
@@ -498,10 +498,10 @@ router.put('/config', async (req, res) => {
     .is('census_pop_0_9', null)
     .not('rolling_3yr_combined', 'is', null)
   const yearsToProxy = [...new Set((gapYears || []).map(r => r.year))].sort((a, b) => a - b)
-  const proxyByYear = {}
-  for (const y of yearsToProxy) {
-    proxyByYear[y] = await applyProxyCensus({ supabase: adminSupabase, year: y, config: fullConfig })
-  }
+  const proxyResults = await Promise.all(
+    yearsToProxy.map(y => applyProxyCensus({ supabase: adminSupabase, year: y, config: fullConfig }))
+  )
+  const proxyByYear = Object.fromEntries(yearsToProxy.map((y, i) => [y, proxyResults[i]]))
 
   const summary = { rowsRecalculated: recalcRows.length, config: newConfig, censusProxy: proxyByYear }
   await logRun('config_change', req.user, 'success', summary)

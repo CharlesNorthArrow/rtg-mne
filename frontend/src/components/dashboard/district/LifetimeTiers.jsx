@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { TIER_CONFIG, getTierColor } from '../../../lib/tiers.js'
+import { TIER_CONFIG, TIER_KEYS, getTierColor } from '../../../lib/tiers.js'
 
 // Bespoke SVG chart. One bar per year between the first and last data year
 // for this district. Bar height encodes tier (T0 shortest → T5 full height)
@@ -163,35 +163,23 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
 
         {/* Bars */}
         {lifetime.map(({ year, row, isNoData }) => {
+          const tier = isNoData ? null : tierOf(row)
+          const isMissing = isNoData || tier == null
+          const h = isMissing
+            ? plotH * 0.08
+            : plotH * ((tier + 1) / TIER_LEVELS)
           const cx = PAD_LEFT + (year - yMin + 0.5) * slotW
           const x  = cx - barW / 2
-
-          if (isNoData) {
-            const h = plotH * 0.08
-            const y = HEIGHT - PAD_BOTTOM - h
-            return (
-              <rect key={year} x={x} y={y} width={barW} height={h} fill="url(#lifetime-nodata)">
-                <title>{`${year} — no data`}</title>
-              </rect>
-            )
-          }
-
-          const tier = tierOf(row)
-          if (tier == null) {
-            const h = plotH * 0.08
-            const y = HEIGHT - PAD_BOTTOM - h
-            return (
-              <rect key={year} x={x} y={y} width={barW} height={h} fill="url(#lifetime-nodata)">
-                <title>{`${year} — tier not computed`}</title>
-              </rect>
-            )
-          }
-
-          const h = plotH * ((tier + 1) / TIER_LEVELS)
-          const y = HEIGHT - PAD_BOTTOM - h
+          const y  = HEIGHT - PAD_BOTTOM - h
+          const fill = isMissing ? 'url(#lifetime-nodata)' : getTierColor(tier)
+          const titleText = isNoData
+            ? `${year} — no data`
+            : tier == null
+              ? `${year} — tier not computed`
+              : `${year} — T${tier} ${TIER_CONFIG[tier].label}`
           return (
-            <rect key={year} x={x} y={y} width={barW} height={h} fill={getTierColor(tier)}>
-              <title>{`${year} — T${tier} ${TIER_CONFIG[tier].label}`}</title>
+            <rect key={year} x={x} y={y} width={barW} height={h} fill={fill}>
+              <title>{titleText}</title>
             </rect>
           )
         })}
@@ -339,7 +327,7 @@ function LifetimeLegend({ hasBooks }) {
     <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
       <span className="flex items-center gap-1.5">
         <span>Lower tier</span>
-        {[0, 1, 2, 3, 4, 5].map(t => (
+        {TIER_KEYS.map(t => (
           <span
             key={t}
             className="inline-block"

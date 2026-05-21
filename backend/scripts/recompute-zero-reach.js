@@ -12,6 +12,7 @@
 import 'dotenv/config'
 import { adminSupabase } from '../src/lib/supabase.js'
 import { computeRatios } from '../src/services/pipeline.js'
+import { fetchAll } from './_lib.js'
 
 const { data: cfg, error: cfgErr } = await adminSupabase
   .from('pipeline_config').select('*').single()
@@ -23,21 +24,6 @@ if (cfgErr) {
 // Pull candidates. Two server-side filters cover the "math fix changes
 // outcome" condition; the third (tier_hn IS NULL OR ratio_0_9_hn IS NULL)
 // is checked client-side because PostgREST OR syntax is finicky.
-async function fetchAll(query) {
-  const PAGE = 1000
-  const out = []
-  let offset = 0
-  while (true) {
-    const { data, error } = await query.range(offset, offset + PAGE - 1)
-    if (error) throw error
-    if (!data || data.length === 0) break
-    out.push(...data)
-    if (data.length < PAGE) break
-    offset += PAGE
-  }
-  return out
-}
-
 const candidates = await fetchAll(
   adminSupabase
     .from('district_tiers')

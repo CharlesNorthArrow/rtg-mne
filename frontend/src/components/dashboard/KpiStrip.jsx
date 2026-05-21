@@ -42,20 +42,19 @@ export default function KpiStrip({ kpis, onPickDistrict }) {
       {/* Row 2 — two list cards */}
       <div className="grid grid-cols-2 gap-2">
         <ListCard
+          kind="low"
           label="Low reach (T0–1)"
           count={c?.low}
           delta={p && c ? fmtDeltaParts(c.low, p.low, 'int') : null}
-          goodWhen="down"
-          tint="rgba(178, 24, 43, 0.06)"
           listLabel="Bottom 5 by ratio"
           items={kpis.bottom}
           onPick={onPickDistrict}
         />
         <ListCard
+          kind="high"
           label="High reach (T4–5)"
           count={c?.high}
           delta={p && c ? fmtDeltaParts(c.high, p.high, 'int') : null}
-          tint="rgba(33, 102, 172, 0.06)"
           listLabel="Top 5 by ratio"
           items={kpis.top}
           onPick={onPickDistrict}
@@ -121,12 +120,21 @@ function Card({ label, primary, secondary, delta }) {
   )
 }
 
-function ListCard({ label, count, delta, listLabel, items, onPick, goodWhen = 'up', tint }) {
+// Reach-bucket presentation: low-reach cards tint red and treat positive
+// deltas as bad (more low-reach districts = bad); high-reach cards tint
+// blue and treat positive deltas as good.
+const REACH_KIND = {
+  low:  { tint: 'rgba(178, 24, 43, 0.06)', goodWhen: 'down' },
+  high: { tint: 'rgba(33, 102, 172, 0.06)', goodWhen: 'up'   },
+}
+
+function ListCard({ kind, label, count, delta, listLabel, items, onPick }) {
+  const { tint, goodWhen } = REACH_KIND[kind]
   return (
     <div
       className="flex gap-3 px-3 py-2"
       style={{
-        background: tint || 'var(--color-background-secondary)',
+        background: tint,
         borderRadius: 'var(--radius-md, 8px)',
       }}
     >

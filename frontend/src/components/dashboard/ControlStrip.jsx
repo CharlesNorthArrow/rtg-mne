@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { countyShort, SD_TYPE_LABEL } from '../../lib/format.js'
 import { AGE_BRACKETS, AGE_LABELS } from '../../lib/tiers.js'
+import CensusProxyBadge from './CensusProxyBadge.jsx'
 
 const PLAY_STEP_MS = 800
 
@@ -321,15 +322,7 @@ function Playback({ yearRange, year, onYearChange, isPlaying, onPlayPauseToggle,
       >
         {year ?? '—'}
       </span>
-      {proxyInfo && (
-        <span
-          className="shrink-0 text-[9px]"
-          style={{ color: 'var(--color-text-tertiary)' }}
-          title="ACS vintage for this year is not yet released. Denominator carried forward from the most recent vintage."
-        >
-          Census {proxyInfo.sourceYear}
-        </span>
-      )}
+      {proxyInfo && <CensusProxyBadge sourceYear={proxyInfo.sourceYear} />}
     </div>
   )
 }

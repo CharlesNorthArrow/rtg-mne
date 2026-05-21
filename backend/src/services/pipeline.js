@@ -30,32 +30,32 @@ export function computeRatios(row, config) {
   const p59   = row.census_pop_5_9
   const hn    = row.doe_high_needs_pct
 
+  // G1+D2 zero-reach sub-rule (see docs/ASSUMPTIONS.md §G1+D2):
+  // zero books with a known child population is a real measurement of "no
+  // reach" against every slice, regardless of slice-specific denominators.
+  if (books === 0 && p09 != null && p09 > 0) {
+    return {
+      ratio_0_9: 0, ratio_0_4: 0, ratio_5_9: 0,
+      ratio_0_9_hn: 0, ratio_0_4_hn: 0, ratio_5_9_hn: 0,
+      tier_overall: 0, tier_hn: 0,
+    }
+  }
+
   const safe = (num, den) => {
     if (num === null || den === null || den === 0) return null
     return num / den
   }
 
-  // G1+D2 zero-reach sub-rule (see docs/ASSUMPTIONS.md §G1+D2):
-  // zero books reach zero of anyone — including high-needs children — so
-  // all six ratios are 0 when rolling=0 and we know the district has
-  // children. The slice-specific denominator (HN %, age subset) being
-  // unavailable does NOT make zero-reach unmeasurable.
-  const zeroReach = (books === 0 && p09 != null && p09 > 0)
-
-  const ratio_0_9    = zeroReach ? 0 : safe(books * config.coeff_0_9, p09)
-  const ratio_0_4    = zeroReach ? 0 : safe(books * config.coeff_0_4, p04)
-  const ratio_5_9    = zeroReach ? 0 : safe(books * config.coeff_5_9, p59)
-  const ratio_0_9_hn = zeroReach ? 0 : safe(books * config.coeff_0_9, p09 && hn ? p09 * hn : null)
-  const ratio_0_4_hn = zeroReach ? 0 : safe(books * config.coeff_0_4, p04 && hn ? p04 * hn : null)
-  const ratio_5_9_hn = zeroReach ? 0 : safe(books * config.coeff_5_9, p59 && hn ? p59 * hn : null)
+  const ratio_0_9    = safe(books * config.coeff_0_9, p09)
+  const ratio_0_9_hn = safe(books * config.coeff_0_9, p09 && hn ? p09 * hn : null)
 
   return {
     ratio_0_9,
-    ratio_0_4,
-    ratio_5_9,
+    ratio_0_4:    safe(books * config.coeff_0_4, p04),
+    ratio_5_9:    safe(books * config.coeff_5_9, p59),
     ratio_0_9_hn,
-    ratio_0_4_hn,
-    ratio_5_9_hn,
+    ratio_0_4_hn: safe(books * config.coeff_0_4, p04 && hn ? p04 * hn : null),
+    ratio_5_9_hn: safe(books * config.coeff_5_9, p59 && hn ? p59 * hn : null),
     tier_overall: assignOverallTier(ratio_0_9, config),
     tier_hn:      assignHnTier(ratio_0_9_hn, config),
   }
@@ -77,22 +77,11 @@ export function computeRollingAvg(priorRows, currentBooks) {
 
 // ── Census proxy carry-forward ─────────────────────────────────────────────
 // DECISION: H8 — see docs/ASSUMPTIONS.md
-// Carry forward most recent ACS vintage as denominator when target year's
-// ACS is unavailable. Cap at one-year gap; refuse further carry-forward.
-// TODO(census-2025-release): remove proxy for 2025 once ACS vintage 2024
-// is published (~Dec 2026).
-//
-// Scans district_tiers for `year`, finds rows that have books data but no
-// census, and proxies the census forward from the most recent prior year
-// where the same geoid has REAL (non-proxy) census data — only if the gap
-// is ≤ 1. Proxies do not chain. Ratios + tiers are recomputed for proxied
-// rows using the carried-forward denominator.
 //
 // Returns: { proxied: number, skipped_gap: number, skipped_no_prior: number }
 export async function applyProxyCensus({ supabase, year, config }) {
   const stats = { proxied: 0, skipped_gap: 0, skipped_no_prior: 0 }
 
-  // Candidates: rows for `year` with books but no real census.
   // name + county are pulled because the upsert path must satisfy their
   // NOT NULL constraints — Postgres validates the INSERT-shape row before
   // ON CONFLICT resolution, even when we intend to UPDATE.
@@ -106,32 +95,41 @@ export async function applyProxyCensus({ supabase, year, config }) {
   if (candErr) throw candErr
   if (!candidates || candidates.length === 0) return stats
 
-  // For each candidate, find the most recent prior year of REAL census data.
-  // Doing this one-by-one keeps the query simple and the count is small (one CT cohort).
+  // One batch query for all candidates' source rows. We pull all prior
+  // real-vintage rows for the geoids in scope, then in JS pick the most
+  // recent per geoid.
+  const geoids = candidates.map(c => c.school_district_geoid)
+  const { data: sources, error: srcErr } = await supabase
+    .from('district_tiers')
+    .select('school_district_geoid, year, census_pop_0_4, census_pop_5_9, census_pop_0_9')
+    .in('school_district_geoid', geoids)
+    .lt('year', year)
+    .eq('census_is_proxy', false)
+    .not('census_pop_0_9', 'is', null)
+    .order('year', { ascending: false })
+
+  if (srcErr) throw srcErr
+
+  const latestSourceByGeoid = new Map()
+  for (const s of sources || []) {
+    if (!latestSourceByGeoid.has(s.school_district_geoid)) {
+      latestSourceByGeoid.set(s.school_district_geoid, s)
+    }
+  }
+
   const updates = []
   for (const c of candidates) {
-    const { data: source } = await supabase
-      .from('district_tiers')
-      .select('year, census_pop_0_4, census_pop_5_9, census_pop_0_9')
-      .eq('school_district_geoid', c.school_district_geoid)
-      .lt('year', year)
-      .eq('census_is_proxy', false)
-      .not('census_pop_0_9', 'is', null)
-      .order('year', { ascending: false })
-      .limit(1)
-
-    const src = source?.[0]
+    const src = latestSourceByGeoid.get(c.school_district_geoid)
     if (!src) { stats.skipped_no_prior += 1; continue }
     if (year - src.year > 1) { stats.skipped_gap += 1; continue }
 
-    const rowForCalc = {
+    const ratios = computeRatios({
       rolling_3yr_combined: c.rolling_3yr_combined,
       census_pop_0_4: src.census_pop_0_4,
       census_pop_5_9: src.census_pop_5_9,
       census_pop_0_9: src.census_pop_0_9,
       doe_high_needs_pct: c.doe_high_needs_pct,
-    }
-    const ratios = computeRatios(rowForCalc, config)
+    }, config)
 
     updates.push({
       school_district_geoid: c.school_district_geoid,

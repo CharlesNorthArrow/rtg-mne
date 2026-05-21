@@ -9,35 +9,10 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { AGE_LABELS } from '../../../lib/tiers.js'
+import { makeVerticalYearLinePlugin } from '../../../lib/chartPlugins.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip)
-
-// Vertical dashed line plugin matching Progression.jsx style.
-// Registered once at module load with a distinct id to avoid clobbering
-// the one in Progression.
-const verticalYearLineDemographics = {
-  id: 'verticalYearLineDemographics',
-  afterDraw(chart) {
-    const opts = chart.options.plugins?.verticalYearLineDemographics
-    if (!opts || opts.year == null) return
-    const label = String(opts.year)
-    const idx = chart.data.labels.indexOf(label)
-    if (idx < 0) return
-    const x = chart.scales.x.getPixelForTick(idx)
-    const { top, bottom } = chart.chartArea
-    const ctx = chart.ctx
-    ctx.save()
-    ctx.strokeStyle = '#6B7280'
-    ctx.lineWidth = 1
-    ctx.setLineDash([4, 4])
-    ctx.beginPath()
-    ctx.moveTo(x, top)
-    ctx.lineTo(x, bottom)
-    ctx.stroke()
-    ctx.restore()
-  },
-}
-ChartJS.register(verticalYearLineDemographics)
+ChartJS.register(makeVerticalYearLinePlugin('verticalYearLineDemographics'))
 
 const COLOR_OVERALL = '#243A78'  // brand blue
 const COLOR_HN      = '#B2182B'  // tier-0 dark red (warm, contrasts with brand blue)
