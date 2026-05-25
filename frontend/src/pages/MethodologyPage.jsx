@@ -11,44 +11,28 @@ const NO_DATA_HATCH =
 
 export default function MethodologyPage() {
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10 space-y-12" style={{ color: 'var(--color-text-primary)' }}>
+    <div className="mx-auto max-w-3xl px-6 py-10 space-y-10" style={{ color: 'var(--color-text-primary)' }}>
       <Header />
-      <Section title="What this dashboard measures">
-        <Intro />
+      <ExecutiveSummary />
+      <Section title="What does the dashboard show?">
+        <WhatThisShows />
+      </Section>
+      <Section title="How we group districts into tiers">
+        <TierSystem />
+      </Section>
+      <Section title="What “Data unavailable” means">
+        <DataUnavailableNote />
+      </Section>
+      <Section title="What the numbers can — and can’t — tell you">
+        <Limitations />
+      </Section>
+      <Section title="Where the data comes from">
+        <WhereDataComesFrom />
       </Section>
 
-      <Section title="The 6-tier scale">
-        <TierScaleVisual />
-        <TierThresholdTables />
-      </Section>
+      <TechnicallyCurious />
 
-      <Section title="What “tier 0” means (and what it doesn’t)">
-        <ThreeStateRule />
-      </Section>
-
-      <Section title="The age coefficients">
-        <CoefficientsExplainer />
-      </Section>
-
-      <Section title="The “high-needs” definition">
-        <HighNeedsDefinition />
-      </Section>
-
-      <Section title="Data sources">
-        <DataSourcesTable />
-      </Section>
-
-      <Section title="Known limitations">
-        <KnownLimitations />
-      </Section>
-
-      <Section title="Methodology decisions on record">
-        <MethodologyDecisions />
-      </Section>
-
-      <Section title="Full methodology document">
-        <FullDocPlaceholder />
-      </Section>
+      <FullDocPlaceholder />
     </div>
   )
 }
@@ -57,10 +41,9 @@ export default function MethodologyPage() {
 function Header() {
   return (
     <header>
-      <h1 className="text-3xl font-semibold leading-tight">Methodology</h1>
+      <h1 className="text-3xl font-semibold leading-tight">About this dashboard</h1>
       <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-        How Read to Grow measures book distribution reach across Connecticut’s
-        158 public school districts.
+        Read to Grow’s book-distribution reach across Connecticut’s 158 public school districts.
       </p>
     </header>
   )
@@ -70,66 +53,79 @@ function Section({ title, children }) {
   return (
     <section>
       <h2 className="text-xl font-semibold mb-3">{title}</h2>
-      <div className="space-y-4 text-sm leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+      <div className="space-y-4 text-[15px] leading-relaxed">
         {children}
       </div>
     </section>
   )
 }
 
-// ── 1) Intro ───────────────────────────────────────────────────────────
-function Intro() {
+// ── Executive summary ──────────────────────────────────────────────────
+function ExecutiveSummary() {
+  return (
+    <section
+      className="px-5 py-4 text-[15px] leading-relaxed"
+      style={{
+        background: 'var(--color-background-primary)',
+        borderRadius: 'var(--radius-md, 8px)',
+        border: '0.5px solid var(--color-border-tertiary)',
+      }}
+    >
+      <p>
+        Read to Grow puts free books into the hands of Connecticut children so they grow up with stories at home. This dashboard shows where those books are reaching kids, district by district and year by year. The map gives you the picture at a glance; the year slider lets you watch the work develop over time. Every public school district in Connecticut is included — including the ones we haven’t reached yet — so no community gets quietly hidden from the story.
+      </p>
+    </section>
+  )
+}
+
+// ── What it shows ──────────────────────────────────────────────────────
+function WhatThisShows() {
   return (
     <>
       <p>
-        The dashboard answers one question for each Connecticut school district:
-        <strong> how many Read to Grow books were distributed per child living in the
-        district, in a given year?</strong> We call this the <em>books-per-child ratio</em>.
+        For each Connecticut school district, the dashboard reports one number: how many <strong>books per child</strong> Read to Grow distributed within that district over the most recent three years. We use a <strong>3-year average</strong> because a single big distribution shouldn’t make a district look like a stable success, and a slow year shouldn’t erase real progress.
       </p>
       <p>
-        <strong>What counts as a “Read to Grow book”:</strong> the dashboard currently
-        includes books distributed through the <strong>Bookmobile</strong> and{' '}
-        <strong>Books for Kids (BFK)</strong> programs only. Other Read to Grow initiatives
-        — events, in-clinic giveaways, third-party partnerships — are not represented
-        in these numbers. If a program isn’t exported from HUB with a Bookmobile or
-        BFK tag, it doesn’t appear here.
+        That number is grouped into one of six tiers, from <strong>no reach</strong> (dark red) to <strong>very high reach</strong> (dark blue). The color of each district on the map tells the story at a glance.
       </p>
       <p>
-        The ratio is computed two ways:
+        You can switch between two views:
       </p>
       <ul className="list-disc pl-5 space-y-1">
         <li>
-          <strong>Overall</strong> — books per child in the full 0–9 age range.
+          <strong>Overall</strong> — books per child across the full 0–9 age range.
         </li>
         <li>
-          <strong>High-Needs</strong> — books per <em>high-needs</em> child in the same age range
-          (definition below). This adjusts for districts where a larger share of the
-          child population qualifies as high-needs.
+          <strong>High-Needs</strong> — books per high-needs child in that same age range. The state of Connecticut counts a student as high-needs if their family qualifies for free or reduced-price meals, if they are learning English at school, or if they receive special education services.
         </li>
       </ul>
       <p>
-        Each district’s ratio is mapped to one of <strong>six tiers</strong>, so the map can be read
-        at a glance: dark red = no reach, dark blue = very high reach. The tiers and
-        their cutoffs are below.
+        Only books distributed through the <strong>Bookmobile</strong> and <strong>Books for Kids</strong> programs are counted here. Other Read to Grow work — events, in-clinic giveaways, partner programs — isn’t yet in these numbers.
       </p>
     </>
   )
 }
 
-// ── 2) Tier scale visual + tables ──────────────────────────────────────
-function TierScaleVisual() {
+// ── Tier system ────────────────────────────────────────────────────────
+function TierSystem() {
   return (
-    <div className="space-y-4">
-      <TierBar label="Overall" thresholds={OVERALL_THRESHOLDS} />
-      <TierBar label="High-Needs" thresholds={HN_THRESHOLDS} />
-    </div>
+    <>
+      <TierBar label="Overall view" />
+      <TierBar label="High-Needs view" />
+      <p>
+        <strong>The cutoffs between tiers are the same every year.</strong> We don’t simply rank Connecticut’s districts and split them into six groups; the line between <em>moderate</em> and <em>high reach</em>, for example, is a fixed books-per-child number that doesn’t move from one year to the next.
+      </p>
+      <p>
+        This means a district’s tier reflects real progress over time, not just how it compares to other districts in a given year. A district moving from <em>low</em> to <em>moderate</em> is a real change in book reach — not a side effect of what happened elsewhere.
+      </p>
+    </>
   )
 }
 
-function TierBar({ label, thresholds }) {
+function TierBar({ label }) {
   return (
     <div
-      className="p-4"
+      className="p-4 mb-2"
       style={{
         background: 'var(--color-background-primary)',
         borderRadius: 'var(--radius-md, 8px)',
@@ -146,41 +142,127 @@ function TierBar({ label, thresholds }) {
               background: TIER_CONFIG[t].mapColor,
               color: TIER_CONFIG[t].textColor,
             }}
-            title={`T${t} · ${TIER_CONFIG[t].label}`}
           >
             T{t}
           </div>
         ))}
       </div>
-      <div className="mt-1 flex text-[10px] tabular-nums" style={{ color: 'var(--color-text-tertiary)' }}>
-        {thresholds.map(t => (
-          <span key={t.tier} className="flex-1 text-center">{t.label}</span>
-        ))}
-      </div>
-      <div className="mt-0.5 flex text-[10px] tabular-nums" style={{ color: 'var(--color-text-tertiary)' }}>
-        {thresholds.map(t => (
-          <span key={`${t.tier}-r`} className="flex-1 text-center font-mono">{t.range}</span>
+      <div className="mt-1 flex text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+        {TIER_KEYS.map(t => (
+          <span key={t} className="flex-1 text-center">{TIER_CONFIG[t].label}</span>
         ))}
       </div>
     </div>
   )
 }
 
-function TierThresholdTables() {
+// ── Data unavailable note ──────────────────────────────────────────────
+function DataUnavailableNote() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <ThresholdTable title="Overall thresholds" rows={OVERALL_THRESHOLDS} />
-      <ThresholdTable title="High-Needs thresholds" rows={HN_THRESHOLDS} />
+    <>
+      <p>
+        Some districts in some years appear with a hatched grey pattern on the map and a “data unavailable” note. This happens when one of the data sources behind the books-per-child number — the state’s enrollment data or the U.S. Census population estimates — doesn’t yet cover that district or that year.
+      </p>
+      <p>
+        <strong>“Data unavailable” is not the same as “no reach.”</strong> It does not mean Read to Grow hasn’t served children there. It means we can’t fairly calculate a books-per-child number without all the inputs. Districts where we measured zero distributions are shown in dark red as <em>no reach</em> — a real, deliberate finding, distinct from missing data.
+      </p>
+    </>
+  )
+}
+
+// ── What the numbers can / can't tell you ──────────────────────────────
+function Limitations() {
+  return (
+    <>
+      <p>
+        Reach is measured by <strong>where books are distributed, not where the children who receive them live</strong>. Each distribution is matched to a Connecticut school district by where it took place. This is a useful picture at the population level, but it isn’t a guarantee about any individual child.
+      </p>
+      <p>
+        Families cross district lines all the time — for libraries, schools, clinics, and community events. A district shown as low or no reach may still have children who received our books at a nearby distribution just across the border. The reverse is also true: a high-reach district’s number includes books that may have gone home with children living in neighboring towns. Use these numbers as a guide to where the work is concentrated, not as a measurement of who specifically received a book.
+      </p>
+    </>
+  )
+}
+
+// ── Where the data comes from ──────────────────────────────────────────
+function WhereDataComesFrom() {
+  return (
+    <>
+      <p>
+        Three sources, one combined picture:
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>
+          <strong>Read to Grow’s own records.</strong> Every Bookmobile and Books for Kids distribution, with the date, the number of books, and the location, exported once a year from RTG’s program-tracking system.
+        </li>
+        <li>
+          <strong>Connecticut State Department of Education.</strong> Yearly enrollment counts for each public school district, and the share of students the state identifies as high-needs. Published on the state’s EdSight portal.
+        </li>
+        <li>
+          <strong>U.S. Census Bureau.</strong> Population estimates for the number of children aged 0–4 and 5–9 living in each Connecticut school district, updated each year.
+        </li>
+      </ul>
+      <p>
+        District boundaries follow Connecticut’s 158 official public school district shapes — the same boundaries the state uses.
+      </p>
+    </>
+  )
+}
+
+// ── Technically-curious collapsible ────────────────────────────────────
+function TechnicallyCurious() {
+  return (
+    <section>
+      <details
+        className="px-5 py-4"
+        style={{
+          background: 'var(--color-background-primary)',
+          borderRadius: 'var(--radius-md, 8px)',
+          border: '0.5px solid var(--color-border-tertiary)',
+        }}
+      >
+        <summary
+          className="cursor-pointer text-base font-semibold select-none"
+          style={{ color: 'var(--color-text-primary)' }}
+        >
+          For the technically curious
+        </summary>
+        <div className="mt-5 space-y-7 text-sm leading-relaxed">
+          <TechTierCutoffs />
+          <TechAgeShares />
+          <TechThreeState />
+          <TechDataSources />
+          <TechDecisions />
+        </div>
+      </details>
+    </section>
+  )
+}
+
+// ── Tech: exact tier cutoffs ───────────────────────────────────────────
+function TechTierCutoffs() {
+  return (
+    <div>
+      <h3 className="text-base font-semibold mb-2">Exact tier cutoffs</h3>
+      <p className="mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+        Books per child is computed against the relevant Census population. The
+        cutoffs are absolute (not quantile-based) so a district’s tier is comparable
+        across years.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CutoffTable title="Overall thresholds" rows={OVERALL_THRESHOLDS} />
+        <CutoffTable title="High-Needs thresholds" rows={HN_THRESHOLDS} />
+      </div>
     </div>
   )
 }
 
-function ThresholdTable({ title, rows }) {
+function CutoffTable({ title, rows }) {
   return (
     <div
       className="p-4"
       style={{
-        background: 'var(--color-background-primary)',
+        background: 'var(--color-background-secondary)',
         borderRadius: 'var(--radius-md, 8px)',
         border: '0.5px solid var(--color-border-tertiary)',
       }}
@@ -206,7 +288,9 @@ function ThresholdTable({ title, rows }) {
                 </span>
               </td>
               <td className="py-1.5">{r.label}</td>
-              <td className="py-1.5 text-right font-mono tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>{r.range}</td>
+              <td className="py-1.5 text-right font-mono tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+                {r.range}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -215,17 +299,57 @@ function ThresholdTable({ title, rows }) {
   )
 }
 
-// ── 3) Three-state rule ────────────────────────────────────────────────
-function ThreeStateRule() {
+// ── Tech: age-share math ───────────────────────────────────────────────
+function TechAgeShares() {
+  const { coeff_0_9, coeff_0_4, coeff_5_9 } = TIER_COEFFICIENTS
   return (
-    <>
+    <div>
+      <h3 className="text-base font-semibold mb-2">Age-share calculation</h3>
+      <p className="mb-2">
+        Not every book Read to Grow distributes is for children aged 0–9. The
+        pipeline applies an estimated share of books to each age band so the
+        numerator only counts books targeted at the relevant ages.
+      </p>
+      <ul className="list-disc pl-5 space-y-1 mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+        <li><span className="font-mono">share_0_9 = {coeff_0_9.toFixed(2)}</span> — share of distributed books targeting ages 0–9.</li>
+        <li><span className="font-mono">share_0_4 = {coeff_0_4.toFixed(2)}</span> — within that, share for 0–4.</li>
+        <li><span className="font-mono">share_5_9 = {coeff_5_9.toFixed(2)}</span> — within that, share for 5–9.</li>
+      </ul>
+      <p className="mb-2">
+        Invariant: <span className="font-mono">share_0_4 + share_5_9 = share_0_9</span>. The remaining{' '}
+        <span className="font-mono">{(1 - coeff_0_9).toFixed(2)}</span> targets ages 10+ and doesn’t enter the 0–9 numbers.
+      </p>
       <p>
-        The map distinguishes <strong>three states</strong>, and they’re different on purpose:
+        <strong>Worked example.</strong> A district distributed 100 books over its 3-year window and has 250 children aged 0–9.
+        Overall books per child ={' '}
+        <span className="font-mono">(100 × {coeff_0_9.toFixed(2)}) / 250 = {((100 * coeff_0_9) / 250).toFixed(3)}</span>{' '}
+        → tier{' '}
+        <span
+          className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
+          style={{ background: TIER_CONFIG[3].mapColor, color: TIER_CONFIG[3].textColor }}
+        >
+          T3 · {TIER_CONFIG[3].label}
+        </span>.
+      </p>
+    </div>
+  )
+}
+
+// ── Tech: three-state semantics ────────────────────────────────────────
+function TechThreeState() {
+  return (
+    <div>
+      <h3 className="text-base font-semibold mb-2">Three states: tier 0, a real tier, and missing</h3>
+      <p className="mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+        The dashboard distinguishes three states on purpose. <strong>Tier 0</strong> means we
+        measured zero reach in a district whose child population we know.{' '}
+        <strong>“Data unavailable”</strong> means we don’t have the inputs to compute a fair
+        number for that district-year.
       </p>
       <div
         className="p-4"
         style={{
-          background: 'var(--color-background-primary)',
+          background: 'var(--color-background-secondary)',
           borderRadius: 'var(--radius-md, 8px)',
           border: '0.5px solid var(--color-border-tertiary)',
         }}
@@ -241,20 +365,12 @@ function ThreeStateRule() {
           </thead>
           <tbody>
             <ThreeStateRow books="0" demo="Yes" tier={0} meaning="Measured zero reach" />
-            <ThreeStateRow books="More than 0" demo="Yes" tier="1–5" meaning="Measured reach (computed)" />
-            <ThreeStateRow books="Any" demo="No" tier={null} meaning="Cannot measure (no denominator)" />
+            <ThreeStateRow books="More than 0" demo="Yes" tier="1–5" meaning="Measured reach" />
+            <ThreeStateRow books="Any" demo="No" tier={null} meaning="Cannot compute" />
           </tbody>
         </table>
       </div>
-      <p>
-        Districts that received no books but where we know the child population
-        show as <strong>tier 0</strong> (dark red on the map). That’s not “no data” — it’s a
-        meaningful measurement: zero books reached children we know are there. The
-        only districts that render as hatched no-data are those where we don’t
-        have a denominator (typically a very old year, or a year whose Census
-        vintage hasn’t been released yet — see H8 below).
-      </p>
-    </>
+    </div>
   )
 }
 
@@ -270,9 +386,6 @@ function ThreeStateRow({ books, demo, tier, meaning }) {
 }
 
 function TierStateChip({ tier }) {
-  // Special case: "1–5" means "whatever the math produces" — render the
-  // diverging T1–T5 palette as a banded swatch so the row visually shows
-  // "a real measured tier".
   if (tier === '1–5') {
     return (
       <span className="inline-flex items-center gap-1.5 align-middle">
@@ -290,7 +403,6 @@ function TierStateChip({ tier }) {
       </span>
     )
   }
-
   if (tier == null) {
     return (
       <span
@@ -305,7 +417,6 @@ function TierStateChip({ tier }) {
       </span>
     )
   }
-
   const cfg = TIER_CONFIG[tier]
   return (
     <span
@@ -317,151 +428,56 @@ function TierStateChip({ tier }) {
   )
 }
 
-// ── 4) Coefficients explainer ──────────────────────────────────────────
-function CoefficientsExplainer() {
-  const { coeff_0_9, coeff_0_4, coeff_5_9 } = TIER_COEFFICIENTS
+// ── Tech: data sources detail ──────────────────────────────────────────
+function TechDataSources() {
   return (
-    <>
-      <p>
-        Not every book distributed by Read to Grow targets the same age range.
-        The pipeline applies three <em>age coefficients</em> when computing ratios, so the
-        numerator only counts books targeted at the relevant age band.
-      </p>
+    <div>
+      <h3 className="text-base font-semibold mb-2">Data sources in detail</h3>
       <div
-        className="p-4"
+        className="p-4 overflow-x-auto"
         style={{
-          background: 'var(--color-background-primary)',
+          background: 'var(--color-background-secondary)',
           borderRadius: 'var(--radius-md, 8px)',
           border: '0.5px solid var(--color-border-tertiary)',
         }}
       >
-        <table className="w-full text-[12px]">
+        <table className="w-full text-[12px] min-w-[640px]">
           <thead>
             <tr style={{ color: 'var(--color-text-tertiary)' }}>
-              <th className="text-left font-normal pb-1">Coefficient</th>
-              <th className="text-left font-normal pb-1">Default</th>
-              <th className="text-left font-normal pb-1">Interpretation</th>
+              <th className="text-left font-normal pb-1">Source</th>
+              <th className="text-left font-normal pb-1">What we use</th>
+              <th className="text-left font-normal pb-1">Coverage</th>
+              <th className="text-left font-normal pb-1">How it’s updated</th>
             </tr>
           </thead>
           <tbody>
-            <CoeffRow name="coeff_0_9" value={coeff_0_9} desc="Fraction of distributed books targeted at children aged 0–9 (the combined early-literacy window)." />
-            <CoeffRow name="coeff_0_4" value={coeff_0_4} desc="Fraction specifically for ages 0–4." />
-            <CoeffRow name="coeff_5_9" value={coeff_5_9} desc="Fraction specifically for ages 5–9." />
+            <DataRow
+              source="Read to Grow HUB (BFK + Bookmobile)"
+              what="Per-distribution rows with date, quantity, latitude/longitude, and program tag"
+              coverage="2004 onwards, Connecticut only"
+              updated="Annual CSV export from HUB, uploaded by the Data Director via /admin/upload. Each upload triggers point-in-polygon matching to a district and a tier recompute."
+            />
+            <DataRow
+              source="CT State Dept. of Education (EdSight)"
+              what="District-level enrollment + high-needs counts"
+              coverage="2009 onwards, all 158 CT public school districts"
+              updated="Annual .xlsx export from EdSight, uploaded via /admin/upload. Parser reads the “Total” and “High Needs” rows of the student_group column."
+            />
+            <DataRow
+              source="U.S. Census ACS 5-Year (B01001 age × sex table)"
+              what="Population aged 0–4 and 5–9 per district"
+              coverage="2009 onwards; each year’s estimates released ~December for the prior 5-year window"
+              updated="Server-side fetch from api.census.gov via /admin/census-refresh. When the current year’s estimates haven’t been published yet, the previous year’s estimates are carried forward and the row is flagged as a proxy (see decision H8)."
+            />
+            <DataRow
+              source="U.S. Census TIGER/Line (composite of unsd + elsd)"
+              what="School-district polygons used for matching distributions and rendering the map"
+              coverage="158 CT districts; static within the platform"
+              updated="Baked into the app at frontend/public/composite_simplified.geojson (simplified for the map) and backend/data/composite_unsd_elsd.geojson (full-resolution for the spatial join)."
+            />
           </tbody>
         </table>
-        <p className="mt-3 text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
-          Invariant: <span className="font-mono">coeff_0_4 + coeff_5_9 = coeff_0_9</span>.
-          With defaults: {coeff_0_4} + {coeff_5_9} = {coeff_0_9}. The remaining{' '}
-          <span className="font-mono">{(1 - coeff_0_9).toFixed(2)}</span> of distributed books targets ages 10+
-          and doesn’t factor into the 0–9 ratios.
-        </p>
       </div>
-      <p>
-        <strong>Worked example.</strong> If a district distributed 100 books over its
-        3-year rolling window and has 250 children aged 0–9, the Overall ratio
-        is <span className="font-mono">(100 × 0.80) / 250 = 0.32</span> books per child — putting it in tier{' '}
-        <span
-          className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
-          style={{ background: TIER_CONFIG[3].mapColor, color: TIER_CONFIG[3].textColor }}
-        >
-          T3 · {TIER_CONFIG[3].label}
-        </span> for the Overall threshold table above.
-      </p>
-    </>
-  )
-}
-
-function CoeffRow({ name, value, desc }) {
-  return (
-    <tr className="border-t" style={{ borderColor: 'var(--color-border-tertiary)' }}>
-      <td className="py-1.5 font-mono">{name}</td>
-      <td className="py-1.5 font-mono tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>{value.toFixed(2)}</td>
-      <td className="py-1.5">{desc}</td>
-    </tr>
-  )
-}
-
-// ── 5) High-Needs definition ───────────────────────────────────────────
-function HighNeedsDefinition() {
-  return (
-    <>
-      <p>
-        A student is counted as <strong>high-needs</strong> under Connecticut State Department of
-        Education (CSDE) reporting if they meet <strong>any one</strong> of the following:
-      </p>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>
-          <strong>Economically disadvantaged</strong> — eligible for free/reduced-price meals
-          (the standard income proxy), or in a household receiving HUSKY (Medicaid), TANF, or SNAP.
-        </li>
-        <li>
-          <strong>English learner</strong> — identified as needing English-language instruction services.
-        </li>
-        <li>
-          <strong>Student with a disability</strong> — receiving special education services under an IEP or §504 plan.
-        </li>
-      </ul>
-      <p>
-        Each district reports a single <span className="font-mono">doe_high_needs_pct</span> per year (the share
-        of total enrolled students meeting any of the three). The High-Needs ratio uses
-        this percentage to estimate the high-needs child population:{' '}
-        <span className="font-mono">census_pop_0_9 × doe_high_needs_pct</span>.
-      </p>
-      <p className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
-        Source: CSDE Performance Office, EdSight portal. Definition is current as of
-        the latest public EdSight release; we update annually when the new report drops.
-      </p>
-    </>
-  )
-}
-
-// ── 6) Data sources ────────────────────────────────────────────────────
-function DataSourcesTable() {
-  return (
-    <div
-      className="p-4 overflow-x-auto"
-      style={{
-        background: 'var(--color-background-primary)',
-        borderRadius: 'var(--radius-md, 8px)',
-        border: '0.5px solid var(--color-border-tertiary)',
-      }}
-    >
-      <table className="w-full text-[12px] min-w-[640px]">
-        <thead>
-          <tr style={{ color: 'var(--color-text-tertiary)' }}>
-            <th className="text-left font-normal pb-1">Source</th>
-            <th className="text-left font-normal pb-1">What we use</th>
-            <th className="text-left font-normal pb-1">Coverage</th>
-            <th className="text-left font-normal pb-1">How it’s updated</th>
-          </tr>
-        </thead>
-        <tbody>
-          <DataRow
-            source="Read to Grow HUB (BFK + Bookmobile)"
-            what="Per-distribution rows with date, quantity, latitude/longitude, and program tag"
-            coverage="2004 onwards; books distributed in CT only"
-            updated="Annual CSV export from HUB, uploaded by Data Director via /admin/upload. Each upload covers one new year and triggers spatial-join + tier recompute."
-          />
-          <DataRow
-            source="CT State Dept. of Education (EdSight)"
-            what="District-level enrollment + high-needs counts"
-            coverage="2009 onwards; 158 CT public-school districts"
-            updated="Annual .xlsx export from EdSight, uploaded via /admin/upload."
-          />
-          <DataRow
-            source="U.S. Census ACS 5-Year (B01001 age × sex table)"
-            what="Population aged 0–4 and 5–9 per district"
-            coverage="2009 onwards; vintages released ~Dec each year for the prior 5-year window"
-            updated="Server-side fetch from api.census.gov via /admin/census-refresh. When the current year’s vintage isn’t out, the previous vintage is carried forward and the row is flagged as a proxy (see H8 below)."
-          />
-          <DataRow
-            source="U.S. Census TIGER/Line (composite of unsd + elsd)"
-            what="School-district polygons used for spatial join and the map"
-            coverage="158 CT districts; static within the platform"
-            updated="Baked in as frontend/public/composite_simplified.geojson (132 KB, simplified via mapshaper) and backend/data/composite_unsd_elsd.geojson (full-resolution)."
-          />
-        </tbody>
-      </table>
     </div>
   )
 }
@@ -477,65 +493,40 @@ function DataRow({ source, what, coverage, updated }) {
   )
 }
 
-// ── Known limitations ──────────────────────────────────────────────────
-function KnownLimitations() {
+// ── Tech: methodology decisions on record ──────────────────────────────
+function TechDecisions() {
   return (
-    <>
-      <p>
-        <strong>Reach is measured by where books were distributed, not where the
-        children who received them live.</strong> Each distribution event is point-in-polygon
-        matched to one of the 158 school-district boundaries by its latitude and
-        longitude. Families regularly cross district lines — for libraries, schools,
-        clinics, and community events — so a district shown as <em>no reach</em> may still
-        have children who received Read to Grow books at a nearby distribution just
-        across the border. Conversely, a high-reach district’s ratio includes books
-        that ultimately ended up with children living elsewhere.
-      </p>
-      <p>
-        The dashboard is a faithful map of <em>distribution geography</em>, which is a useful
-        proxy for reach at the population level. It is not a per-child guarantee, and
-        district-level numbers should be interpreted with this caveat in mind —
-        especially for small towns and any district adjacent to a heavy distribution
-        site.
-      </p>
-    </>
-  )
-}
-
-// ── 7) Methodology decisions ───────────────────────────────────────────
-function MethodologyDecisions() {
-  return (
-    <>
-      <p>
-        Two methodology decisions are currently active. Both are documented in
-        the repo at <span className="font-mono text-[12px]">docs/ASSUMPTIONS.md</span> with full reasoning.
+    <div>
+      <h3 className="text-base font-semibold mb-2">Methodology decisions on record</h3>
+      <p className="mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+        Documented in the repo at <span className="font-mono">docs/ASSUMPTIONS.md</span> with full reasoning.
       </p>
       <DecisionCard
         id="G1+D2"
         title="Full cross-product panel — measured no-reach is real"
         rule="Every (district, year) cell exists, even when no books were distributed. A district with zero books and a known child population gets tier 0 (“measured no reach”) rather than being dropped from the panel."
-        impact="The map now shows districts that genuinely received zero books as dark red, instead of hiding them as hatched no-data. Both Overall and High-Needs views follow this rule — zero books reach zero of anyone."
-        implementation="backend/src/services/pipeline.js (zeroReach guard) + backend/scripts/expand-panel.js (one-shot backfill, 231 cells added) + backend/scripts/recompute-zero-reach.js (HN tier sub-fix)."
+        impact="The map now shows districts that genuinely received zero books as dark red, instead of hiding them. Overall and High-Needs views follow the same rule — zero books reach zero of anyone."
+        implementation="backend/src/services/pipeline.js (zeroReach guard) + backend/scripts/expand-panel.js (one-shot backfill) + backend/scripts/recompute-zero-reach.js."
         accepted="2026-05-21"
       />
       <DecisionCard
         id="H8"
-        title="Census proxy carry-forward"
-        rule="When the current year’s Census ACS vintage hasn’t been published yet, the previous vintage’s population values are carried forward as the denominator, and the row is flagged as a proxy."
-        impact="The 2025 panel year is visible on the dashboard right now, using 2024 Census data. The small “Census 2024” label next to the year slider and inside the district header tells you which vintage produced the ratio."
-        implementation="backend/src/services/pipeline.js (applyProxyCensus) — runs after every /upload-books, /census-refresh, and config recompute. Caps at one year (gap > 1 is refused; would require a fresh decision H8b)."
+        title="Census estimates carry-forward"
+        rule="When the current year’s U.S. Census estimates haven’t been published yet, the previous year’s population values are carried forward and the row is flagged."
+        impact="The 2025 panel year is visible right now using the 2024 estimates. The small “Census 2024” label next to the year slider and inside the district header tells you which year’s estimates produced the number."
+        implementation="backend/src/services/pipeline.js (applyProxyCensus) — runs after every /upload-books, /census-refresh, and config recompute. Refuses to carry forward more than one year."
         accepted="2026-05-21"
       />
-    </>
+    </div>
   )
 }
 
 function DecisionCard({ id, title, rule, impact, implementation, accepted }) {
   return (
     <div
-      className="p-4 space-y-2"
+      className="p-4 space-y-2 mb-3"
       style={{
-        background: 'var(--color-background-primary)',
+        background: 'var(--color-background-secondary)',
         borderRadius: 'var(--radius-md, 8px)',
         border: '0.5px solid var(--color-border-tertiary)',
       }}
@@ -550,7 +541,7 @@ function DecisionCard({ id, title, rule, impact, implementation, accepted }) {
         </span>
       </div>
       <p><strong>Rule.</strong> {rule}</p>
-      <p><strong>What changes for you.</strong> {impact}</p>
+      <p><strong>What changes for the dashboard.</strong> {impact}</p>
       <p className="text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
         Implementation: <span className="font-mono">{implementation}</span>
       </p>
@@ -558,7 +549,7 @@ function DecisionCard({ id, title, rule, impact, implementation, accepted }) {
   )
 }
 
-// ── 8) Full doc placeholder ────────────────────────────────────────────
+// ── Full doc placeholder (unchanged) ───────────────────────────────────
 function FullDocPlaceholder() {
   return (
     <div
