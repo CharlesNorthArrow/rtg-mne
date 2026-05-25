@@ -24,7 +24,7 @@ export default function MethodologyPage() {
       <Section title="What “Data unavailable” means">
         <DataUnavailableNote />
       </Section>
-      <Section title="What the numbers can — and can’t — tell you">
+      <Section title="What the numbers can, and can’t, tell you">
         <Limitations />
       </Section>
       <Section title="Where the data comes from">
@@ -112,13 +112,13 @@ function ExecutiveSummary() {
         </span>
       </h2>
       <p>
-        Read to Grow’s mission is to promote language skills and literacy for Connecticut’s children, beginning at birth — ensuring that every family, regardless of circumstance, has books at home and the knowledge to use them. Since 1998, we have distributed more than 2.4 million books across the state through our Books for Kids and Bookmobile programs. This dashboard is how we measure whether those books are reaching the children who need them most.
+        Read to Grow’s mission is to promote language skills and literacy for Connecticut’s children, beginning at birth, by ensuring that every family, regardless of circumstance, has books at home and the knowledge to use them. Since 1998, we have distributed more than 2.4 million books across the state through our Books for Kids and Bookmobile programs. This dashboard is how we measure whether those books are reaching the children who need them most.
       </p>
       <p>
-        For each of Connecticut’s 158 school districts, we calculate a reach ratio: the estimated number of books distributed per child aged 0–9, based on a three-year average of our distribution data. Using a three-year window reduces the effect of any single unusual year and gives a more stable picture of our presence in each community. We report this ratio for all children in a district and separately for high-needs children — those who are economically disadvantaged, English learners, or students with disabilities — because equitable reach matters as much as overall reach.
+        For each of Connecticut’s 158 school districts, we calculate a reach ratio: the estimated number of books distributed per child aged 0–9, based on a three-year average of our distribution data. Using a three-year window reduces the effect of any single unusual year and gives a more stable picture of our presence in each community. We report this ratio for all children in a district and separately for high-needs children (those who are economically disadvantaged, English learners, or students with disabilities), because equitable reach matters as much as overall reach. Each of those three subgroups is also reported separately in district detail and can be used to filter the map.
       </p>
       <p>
-        Each district is assigned a tier from 0 to 5 based on where its ratio falls against a fixed set of benchmarks. These benchmarks do not change from year to year. That is deliberate: a district moving from Tier 2 to Tier 3 represents real growth in our reach, not a shift in how we define the tiers. Districts we have not yet reached are included at Tier 0 — no community is left out of the picture.
+        Each district is assigned a tier from 0 to 5 based on where its ratio falls against a fixed set of benchmarks. These benchmarks do not change from year to year. That is deliberate: a district moving from Tier 2 to Tier 3 represents real growth in our reach, not a shift in how we define the tiers. Districts we have not yet reached are included at Tier 0, so no community is left out of the picture.
       </p>
     </section>
   )
@@ -139,14 +139,14 @@ function WhatThisShows() {
       </p>
       <ul className="list-disc pl-5 space-y-1">
         <li>
-          <strong>Overall</strong> — books per child across the full 0–9 age range.
+          <strong>Overall:</strong> books per child across the full 0–9 age range.
         </li>
         <li>
-          <strong>High-Needs</strong> — books per high-needs child in that same age range. The state of Connecticut counts a student as high-needs if their family qualifies for free or reduced-price meals, if they are learning English at school, or if they receive special education services.
+          <strong>High-Needs:</strong> books per high-needs child in that same age range. The state of Connecticut counts a student as high-needs if their family qualifies for free or reduced-price meals, if they are learning English at school, or if they receive special education services.
         </li>
       </ul>
       <p>
-        Only books distributed through the <strong>Bookmobile</strong> and <strong>Books for Kids</strong> programs are counted here. Other Read to Grow work — events, in-clinic giveaways, partner programs — isn’t yet in these numbers.
+        Only books distributed through the <strong>Bookmobile</strong> and <strong>Books for Kids</strong> programs are counted here. Other Read to Grow work (events, in-clinic giveaways, partner programs) isn’t yet in these numbers.
       </p>
     </>
   )
@@ -162,7 +162,7 @@ function TierSystem() {
         <strong>The cutoffs between tiers are the same every year.</strong> We don’t simply rank Connecticut’s districts and split them into six groups; the line between <em>moderate</em> and <em>high reach</em>, for example, is a fixed books-per-child number that doesn’t move from one year to the next.
       </p>
       <p>
-        This means a district’s tier reflects real progress over time, not just how it compares to other districts in a given year. A district moving from <em>low</em> to <em>moderate</em> is a real change in book reach — not a side effect of what happened elsewhere.
+        This means a district’s tier reflects real progress over time, not just how it compares to other districts in a given year. A district moving from <em>low</em> to <em>moderate</em> is a real change in book reach, not a side effect of what happened elsewhere.
       </p>
     </>
   )
@@ -207,10 +207,10 @@ function DataUnavailableNote() {
   return (
     <>
       <p>
-        Some districts in some years appear with a hatched grey pattern on the map and a “data unavailable” note. This happens when one of the data sources behind the books-per-child number — the state’s enrollment data or the U.S. Census population estimates — doesn’t yet cover that district or that year.
+        Some districts in some years appear with a hatched grey pattern on the map and a “data unavailable” note. This happens when one of the data sources behind the books-per-child number (the state’s enrollment data or the U.S. Census population estimates) doesn’t yet cover that district or that year.
       </p>
       <p>
-        <strong>“Data unavailable” is not the same as “no reach.”</strong> It does not mean Read to Grow hasn’t served children there. It means we can’t fairly calculate a books-per-child number without all the inputs. Districts where we measured zero distributions are shown in dark red as <em>no reach</em> — a real, deliberate finding, distinct from missing data.
+        <strong>“Data unavailable” is not the same as “no reach.”</strong> It does not mean Read to Grow hasn’t served children there. It means we can’t fairly calculate a books-per-child number without all the inputs. Districts where we measured zero distributions are shown in dark red as <em>no reach</em>. That is a real, deliberate finding, distinct from missing data.
       </p>
     </>
   )
@@ -224,7 +224,7 @@ function Limitations() {
         Reach is measured by <strong>where books are distributed, not where the children who receive them live</strong>. Each distribution is matched to a Connecticut school district by where it took place. This is a useful picture at the population level, but it isn’t a guarantee about any individual child.
       </p>
       <p>
-        Families cross district lines all the time — for libraries, schools, clinics, and community events. A district shown as low or no reach may still have children who received our books at a nearby distribution just across the border. The reverse is also true: a high-reach district’s number includes books that may have gone home with children living in neighboring towns. Use these numbers as a guide to where the work is concentrated, not as a measurement of who specifically received a book.
+        Families cross district lines all the time, for libraries, schools, clinics, and community events. A district shown as low or no reach may still have children who received our books at a nearby distribution just across the border. The reverse is also true: a high-reach district’s number includes books that may have gone home with children living in neighboring towns. Use these numbers as a guide to where the work is concentrated, not as a measurement of who specifically received a book.
       </p>
     </>
   )
@@ -249,7 +249,7 @@ function WhereDataComesFrom() {
         </li>
       </ul>
       <p>
-        District boundaries follow Connecticut’s 158 official public school district shapes — the same boundaries the state uses.
+        District boundaries follow Connecticut’s 158 official public school district shapes, the same boundaries the state uses.
       </p>
     </>
   )
@@ -358,9 +358,9 @@ function TechAgeShares() {
         numerator only counts books targeted at the relevant ages.
       </p>
       <ul className="list-disc pl-5 space-y-1 mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-        <li><span className="font-mono">share_0_9 = {coeff_0_9.toFixed(2)}</span> — share of distributed books targeting ages 0–9.</li>
-        <li><span className="font-mono">share_0_4 = {coeff_0_4.toFixed(2)}</span> — within that, share for 0–4.</li>
-        <li><span className="font-mono">share_5_9 = {coeff_5_9.toFixed(2)}</span> — within that, share for 5–9.</li>
+        <li><span className="font-mono">share_0_9 = {coeff_0_9.toFixed(2)}</span>: share of distributed books targeting ages 0–9.</li>
+        <li><span className="font-mono">share_0_4 = {coeff_0_4.toFixed(2)}</span>: within that, share for 0–4.</li>
+        <li><span className="font-mono">share_5_9 = {coeff_5_9.toFixed(2)}</span>: within that, share for 5–9.</li>
       </ul>
       <p className="mb-2">
         Invariant: <span className="font-mono">share_0_4 + share_5_9 = share_0_9</span>. The remaining{' '}
@@ -550,9 +550,9 @@ function TechDecisions() {
       </p>
       <DecisionCard
         id="G1+D2"
-        title="Full cross-product panel — measured no-reach is real"
+        title="Full cross-product panel: measured no-reach is real"
         rule="Every (district, year) cell exists, even when no books were distributed. A district with zero books and a known child population gets tier 0 (“measured no reach”) rather than being dropped from the panel."
-        impact="The map now shows districts that genuinely received zero books as dark red, instead of hiding them. Overall and High-Needs views follow the same rule — zero books reach zero of anyone."
+        impact="The map now shows districts that genuinely received zero books as dark red, instead of hiding them. Overall and High-Needs views follow the same rule: zero books reach zero of anyone."
         implementation="backend/src/services/pipeline.js (zeroReach guard) + backend/scripts/expand-panel.js (one-shot backfill) + backend/scripts/recompute-zero-reach.js."
         accepted="2026-05-21"
       />
@@ -561,7 +561,7 @@ function TechDecisions() {
         title="Census estimates carry-forward"
         rule="When the current year’s U.S. Census estimates haven’t been published yet, the previous year’s population values are carried forward and the row is flagged."
         impact="The 2025 panel year is visible right now using the 2024 estimates. The small “Census 2024” label next to the year slider and inside the district header tells you which year’s estimates produced the number."
-        implementation="backend/src/services/pipeline.js (applyProxyCensus) — runs after every /upload-books, /census-refresh, and config recompute. Refuses to carry forward more than one year."
+        implementation="backend/src/services/pipeline.js (applyProxyCensus), which runs after every /upload-books, /census-refresh, and config recompute. Refuses to carry forward more than one year."
         accepted="2026-05-21"
       />
     </div>

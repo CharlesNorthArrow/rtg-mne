@@ -22,6 +22,11 @@ export default function ControlStrip({
   isPlaying,
   onPlayPauseToggle,
   proxyInfo,
+  needThresholds,
+  onNeedChange,
+  onNeedReset,
+  visibleCount,
+  totalCount,
 }) {
   return (
     <div
@@ -36,6 +41,13 @@ export default function ControlStrip({
         all={counties}
         selected={selectedCounties}
         onChange={onCountiesChange}
+      />
+      <NeedFilter
+        value={needThresholds}
+        onChange={onNeedChange}
+        onReset={onNeedReset}
+        visibleCount={visibleCount}
+        totalCount={totalCount}
       />
       <DistrictFilter
         districts={districts}
@@ -114,6 +126,95 @@ function CountyFilter({ all, selected, onChange }) {
               Clear
             </button>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Need filter (3 lower-bound sliders) ────────────────────────────────
+const NEED_KEYS = [
+  { key: 'econDis',        label: 'Economically Disadvantaged' },
+  { key: 'englishLearner', label: 'English Learners' },
+  { key: 'swd',            label: 'Students with Disabilities' },
+]
+
+function NeedFilter({ value, onChange, onReset, visibleCount, totalCount }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function close(e) { if (!ref.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const activeCount = NEED_KEYS.filter(k => (value?.[k.key] ?? 0) > 0).length
+  const label = activeCount === 0 ? 'Need: any' : `Need (${activeCount})`
+
+  function update(key, pct) {
+    onChange({ ...value, [key]: pct })
+  }
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="rounded px-3 py-1.5 text-sm"
+        style={{
+          background: 'var(--color-background-primary)',
+          border: '0.5px solid var(--color-border-tertiary)',
+          color: 'var(--color-text-primary)',
+          minWidth: 130,
+          textAlign: 'left',
+        }}
+        title="Filter districts by share of high-needs subgroups"
+      >
+        {label} <span className="ml-1" style={{ color: 'var(--color-text-tertiary)' }}>▾</span>
+      </button>
+      {open && (
+        <div
+          className="absolute z-20 mt-1 w-72 rounded-md p-3 shadow-lg"
+          style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-secondary)' }}
+        >
+          <div className="text-[11px] mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+            Show districts where each share is at least…
+          </div>
+          {NEED_KEYS.map(({ key, label }) => (
+            <div key={key} className="mb-2 last:mb-0">
+              <div className="flex items-baseline justify-between text-xs mb-0.5">
+                <span style={{ color: 'var(--color-text-primary)' }}>{label}</span>
+                <span className="tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+                  ≥ {value?.[key] ?? 0}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={value?.[key] ?? 0}
+                onChange={e => update(key, Number(e.target.value))}
+                className="w-full accent-gray-700"
+                aria-label={`Minimum ${label} %`}
+              />
+            </div>
+          ))}
+          <div className="mt-2 flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--color-text-tertiary)' }}>
+              Showing {visibleCount} of {totalCount}
+            </span>
+            {activeCount > 0 && (
+              <button
+                onClick={onReset}
+                className="rounded px-2 py-0.5 hover:bg-gray-50"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -296,7 +397,7 @@ function Playback({ yearRange, year, onYearChange, isPlaying, onPlayPauseToggle,
   if (min == null || max == null) return null
 
   return (
-    <div className="flex items-center gap-2 ml-auto" style={{ flex: '1 1 220px', maxWidth: 340 }}>
+    <div className="flex items-center gap-2 ml-auto" style={{ flex: '1 1 220px', minWidth: 220 }}>
       <button
         type="button"
         onClick={handlePlay}

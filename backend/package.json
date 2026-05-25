@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "proxy-census": "node scripts/apply-proxy-census.js",
     "expand-panel": "node scripts/expand-panel.js",
-    "recompute-zero-reach": "node scripts/recompute-zero-reach.js"
+    "recompute-zero-reach": "node scripts/recompute-zero-reach.js",
+    "import-hn-subgroups": "node scripts/import-hn-subgroups.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

@@ -1,21 +1,28 @@
 import { create } from 'zustand'
 
+// Identity-stable default for the need filter. Consumers can compare against
+// this with === to short-circuit when no filter is applied.
+export const NO_NEED_THRESHOLDS = Object.freeze({ econDis: 0, englishLearner: 0, swd: 0 })
+
 // Dashboard state — single source of truth per spec §5.
 // Selectors are computed by consumers (see lib/dashboardSelectors.js).
 export const useDashboardStore = create((set) => ({
-  selectedYear:          null,          // populated from data on mount
-  selectedMetric:        'overall',     // 'overall' | 'hn'
-  selectedAge:           '0_9',         // '0_4' | '0_9' | '5_9'
-  selectedCounties:      [],            // [] = all
-  selectedDistrictGeoid: null,          // null = snapshot mode
-  hoveredDistrictGeoid:  null,          // map tooltip only
+  selectedYear:             null,                  // populated from data on mount
+  selectedMetric:           'overall',             // 'overall' | 'hn'
+  selectedAge:              '0_9',                 // '0_4' | '0_9' | '5_9'
+  selectedCounties:         [],                    // [] = all
+  selectedDistrictGeoid:    null,                  // null = snapshot mode
+  hoveredDistrictGeoid:     null,                  // map tooltip only
+  selectedNeedThresholds:   NO_NEED_THRESHOLDS,    // { econDis, englishLearner, swd } as 0–100 pct floors
 
-  setYear:              (selectedYear)          => set({ selectedYear }),
-  setMetric:            (selectedMetric)        => set({ selectedMetric }),
-  setAge:               (selectedAge)           => set({ selectedAge }),
-  setCounties:          (selectedCounties)      => set({ selectedCounties }),
-  setSelectedDistrict:  (selectedDistrictGeoid) => set({ selectedDistrictGeoid }),
-  setHoveredDistrict:   (hoveredDistrictGeoid)  => set({ hoveredDistrictGeoid }),
+  setYear:               (selectedYear)            => set({ selectedYear }),
+  setMetric:             (selectedMetric)          => set({ selectedMetric }),
+  setAge:                (selectedAge)             => set({ selectedAge }),
+  setCounties:           (selectedCounties)        => set({ selectedCounties }),
+  setSelectedDistrict:   (selectedDistrictGeoid)   => set({ selectedDistrictGeoid }),
+  setHoveredDistrict:    (hoveredDistrictGeoid)    => set({ hoveredDistrictGeoid }),
+  setNeedThresholds:     (selectedNeedThresholds)  => set({ selectedNeedThresholds }),
+  resetNeedThresholds:   ()                         => set({ selectedNeedThresholds: NO_NEED_THRESHOLDS }),
 
   // Hydrate from URL on mount
   hydrate: (partial) => set(partial),

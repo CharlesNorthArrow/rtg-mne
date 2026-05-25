@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/supabase.js'
-import { useDashboardStore } from '../store/dashboard.js'
+import { useDashboardStore, NO_NEED_THRESHOLDS } from '../store/dashboard.js'
 import { useDashboardUrlSync } from '../hooks/useDashboardUrlSync.js'
 import {
   indexByYear,
@@ -22,18 +22,21 @@ export default function DashboardPage() {
   useDashboardUrlSync()
 
   // Store reads
-  const year             = useDashboardStore(s => s.selectedYear)
-  const metric           = useDashboardStore(s => s.selectedMetric)
-  const age              = useDashboardStore(s => s.selectedAge)
-  const selectedCounties = useDashboardStore(s => s.selectedCounties)
-  const selectedGeoid    = useDashboardStore(s => s.selectedDistrictGeoid)
+  const year                   = useDashboardStore(s => s.selectedYear)
+  const metric                 = useDashboardStore(s => s.selectedMetric)
+  const age                    = useDashboardStore(s => s.selectedAge)
+  const selectedCounties       = useDashboardStore(s => s.selectedCounties)
+  const selectedGeoid          = useDashboardStore(s => s.selectedDistrictGeoid)
+  const selectedNeedThresholds = useDashboardStore(s => s.selectedNeedThresholds)
 
   // Store writers
-  const setYear     = useDashboardStore(s => s.setYear)
-  const setMetric   = useDashboardStore(s => s.setMetric)
-  const setAge      = useDashboardStore(s => s.setAge)
-  const setCounties = useDashboardStore(s => s.setCounties)
-  const setSelected = useDashboardStore(s => s.setSelectedDistrict)
+  const setYear              = useDashboardStore(s => s.setYear)
+  const setMetric            = useDashboardStore(s => s.setMetric)
+  const setAge               = useDashboardStore(s => s.setAge)
+  const setCounties          = useDashboardStore(s => s.setCounties)
+  const setSelected          = useDashboardStore(s => s.setSelectedDistrict)
+  const setNeedThresholds    = useDashboardStore(s => s.setNeedThresholds)
+  const resetNeedThresholds  = useDashboardStore(s => s.resetNeedThresholds)
 
   // Local state
   const [panel, setPanel]         = useState(null)
@@ -102,10 +105,34 @@ export default function DashboardPage() {
   }, [districtsList, selectedCounties])
 
   const visibleGeoids = useMemo(() => {
-    if (!selectedCounties.length) return 'all'
-    const s = new Set(selectedCounties)
-    return new Set(districtsList.filter(d => s.has(d.county)).map(d => d.school_district_geoid))
-  }, [districtsList, selectedCounties])
+    const t = selectedNeedThresholds
+    const needActive = t !== NO_NEED_THRESHOLDS &&
+      (t.econDis > 0 || t.englishLearner > 0 || t.swd > 0)
+    const countySet = selectedCounties.length ? new Set(selectedCounties) : null
+    if (!countySet && !needActive) return 'all'
+
+    const yearRows = rowsByYear.get(year) || []
+    const rowByGeoid = new Map()
+    for (const r of yearRows) rowByGeoid.set(r.school_district_geoid, r)
+
+    const out = new Set()
+    for (const d of districtsList) {
+      if (countySet && !countySet.has(d.county)) continue
+      if (needActive) {
+        const r = rowByGeoid.get(d.school_district_geoid)
+        const total = r?.doe_total_enrollment
+        if (!r || !total) continue            // no enrollment denominator → excluded when need filter active
+        const eShare = (r.doe_econ_dis_count          ?? 0) / total
+        const lShare = (r.doe_english_learner_count   ?? 0) / total
+        const sShare = (r.doe_swd_count               ?? 0) / total
+        if (eShare < t.econDis / 100) continue
+        if (lShare < t.englishLearner / 100) continue
+        if (sShare < t.swd / 100) continue
+      }
+      out.add(d.school_district_geoid)
+    }
+    return out
+  }, [districtsList, selectedCounties, selectedNeedThresholds, rowsByYear, year])
 
   useEffect(() => {
     if (!selectedGeoid) return
@@ -194,6 +221,11 @@ export default function DashboardPage() {
         isPlaying={isPlaying}
         onPlayPauseToggle={setIsPlaying}
         proxyInfo={proxyInfo}
+        needThresholds={selectedNeedThresholds}
+        onNeedChange={setNeedThresholds}
+        onNeedReset={resetNeedThresholds}
+        visibleCount={visibleGeoids === 'all' ? districtsList.length : visibleGeoids.size}
+        totalCount={districtsList.length}
       />
 
       <div className="flex flex-1 min-h-0 gap-3">

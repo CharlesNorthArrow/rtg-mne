@@ -4,7 +4,6 @@ import {
   lifetimeRows,
   demographicsSeries,
 } from '../../../lib/districtSelectors.js'
-import { ratioFieldName } from '../../../lib/tiers.js'
 import DistrictHeader from './DistrictHeader.jsx'
 import LifetimeTiers from './LifetimeTiers.jsx'
 import DemographicsContext from './DemographicsContext.jsx'
@@ -28,11 +27,9 @@ export default function DistrictPanel({
     [series],
   )
 
-  const ratioOverallField = ratioFieldName('overall', age)
-  const ratioHnField      = ratioFieldName('hn',      age)
   const demographics = useMemo(
-    () => demographicsSeries(series, ratioOverallField, ratioHnField),
-    [series, ratioOverallField, ratioHnField],
+    () => demographicsSeries(series, age),
+    [series, age],
   )
 
   // Current-year row, falling back to the most recent row if the district

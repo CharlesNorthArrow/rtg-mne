@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,55 +15,93 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartToo
 ChartJS.register(makeVerticalYearLinePlugin('verticalYearLineDemographics'))
 
 const COLOR_OVERALL = '#243A78'  // brand blue
-const COLOR_HN      = '#B2182B'  // tier-0 dark red (warm, contrasts with brand blue)
+const COLOR_ECON    = '#B2182B'  // tier-0 red (HN's dominant subgroup)
+const COLOR_EL      = '#EF8A62'  // tier-1 lighter red-orange
+const COLOR_SWD     = '#6B7280'  // slate
+
+// Lighter shades of EconDis red for the Free/Reduced split.
+const COLOR_FREE    = '#B2182B'
+const COLOR_REDUCED = '#EF8A62'
+
+// Small categorical palette for the 7 SwD subtypes (Tableau 10-ish).
+const COLOR_SWD_SUB = {
+  autism:       '#1f77b4',
+  emotional:    '#ff7f0e',
+  intellectual: '#2ca02c',
+  learning:     '#9467bd',
+  other:        '#8c564b',
+  otherHealth:  '#e377c2',
+  speech:       '#17becf',
+}
+
+const SUBGROUP_LABEL = {
+  econDis: 'Economically Disadvantaged',
+  el:      'English Learners',
+  swd:     'Students with Disabilities',
+}
+
+const SWD_LABEL = {
+  autism: 'Autism', emotional: 'Emotional', intellectual: 'Intellectual',
+  learning: 'Learning', other: 'Other', otherHealth: 'Other Health Imp.', speech: 'Speech/Language',
+}
+
+function lineDataset({ label, data, color, dashed = false }) {
+  return {
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: color,
+    borderWidth: 1.5,
+    borderDash: dashed ? [3, 3] : undefined,
+    pointRadius: 0,
+    tension: 0.2,
+    spanGaps: true,
+  }
+}
 
 export default function DemographicsContext({ demographics, age, year }) {
-  const { years, hnPct, ratioOverall, ratioHn } = demographics
+  const {
+    years, hnPct, ratioOverall,
+    ratioEconDis, ratioEL, ratioSwD,
+    econDisSplit, swdSplit,
+  } = demographics
+
+  const [splitEconDis, setSplitEconDis] = useState(false)
+  const [splitSwD, setSplitSwD]         = useState(false)
+
   const labels = useMemo(() => years.map(String), [years])
   const hasAnyHn = hnPct.some(v => v != null && !isNaN(v))
-  const hasAnyRatio = ratioOverall.some(v => v != null && !isNaN(v))
-                  || ratioHn.some(v => v != null && !isNaN(v))
 
+  // HN-share mini-chart (unchanged)
   const hnData = useMemo(() => ({
     labels,
-    datasets: [{
-      label: 'High-needs share',
-      data: hnPct.map(v => v == null ? null : v * 100),  // pct as 0–100
-      borderColor: COLOR_HN,
-      backgroundColor: COLOR_HN,
-      borderWidth: 1.5,
-      pointRadius: 0,
-      tension: 0.2,
-      spanGaps: true,
-    }],
+    datasets: [lineDataset({ label: 'High-needs share', data: hnPct.map(v => v == null ? null : v * 100), color: COLOR_ECON })],
   }), [labels, hnPct])
 
-  const ratiosData = useMemo(() => ({
-    labels,
-    datasets: [
-      {
-        label: 'Overall',
-        data: ratioOverall,
-        borderColor: COLOR_OVERALL,
-        backgroundColor: COLOR_OVERALL,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        tension: 0.2,
-        spanGaps: true,
-      },
-      {
-        label: 'High-needs',
-        data: ratioHn,
-        borderColor: COLOR_HN,
-        backgroundColor: COLOR_HN,
-        borderWidth: 1.5,
-        borderDash: [3, 3],
-        pointRadius: 0,
-        tension: 0.2,
-        spanGaps: true,
-      },
-    ],
-  }), [labels, ratioOverall, ratioHn])
+  // Build the ratio chart datasets: Overall + 3 subgroups (or splits when toggled).
+  const ratiosData = useMemo(() => {
+    const ds = [lineDataset({ label: 'Overall', data: ratioOverall, color: COLOR_OVERALL })]
+
+    if (splitEconDis) {
+      ds.push(lineDataset({ label: 'Free meals',    data: econDisSplit.freeMeals,    color: COLOR_FREE }))
+      ds.push(lineDataset({ label: 'Reduced price', data: econDisSplit.reducedPrice, color: COLOR_REDUCED, dashed: true }))
+    } else {
+      ds.push(lineDataset({ label: SUBGROUP_LABEL.econDis, data: ratioEconDis, color: COLOR_ECON }))
+    }
+
+    ds.push(lineDataset({ label: SUBGROUP_LABEL.el, data: ratioEL, color: COLOR_EL }))
+
+    if (splitSwD) {
+      for (const k of ['autism','emotional','intellectual','learning','other','otherHealth','speech']) {
+        ds.push(lineDataset({ label: SWD_LABEL[k], data: swdSplit[k], color: COLOR_SWD_SUB[k] }))
+      }
+    } else {
+      ds.push(lineDataset({ label: SUBGROUP_LABEL.swd, data: ratioSwD, color: COLOR_SWD }))
+    }
+    return { labels, datasets: ds }
+  }, [labels, ratioOverall, ratioEconDis, ratioEL, ratioSwD, econDisSplit, swdSplit, splitEconDis, splitSwD])
+
+  const hasAnyRatio = ratiosData.datasets.some(d => d.data.some(v => v != null && !isNaN(v)))
 
   const baseOptions = useMemo(() => ({
     responsive: true,
@@ -126,18 +164,86 @@ export default function DemographicsContext({ demographics, age, year }) {
         <Line data={hnData} options={hnOptions} />
       </Mini>
       <Mini
-        title={`Overall vs HN ratio · ${AGE_LABELS[age]}`}
+        title={`Books per child by group · ${AGE_LABELS[age]}`}
         empty={!hasAnyRatio}
         legend={
-          <div className="flex items-center gap-3 text-[9px]" style={{ color: 'var(--color-text-tertiary)' }}>
-            <Swatch color={COLOR_OVERALL} label="Overall" />
-            <Swatch color={COLOR_HN} label="High-needs" dashed />
-          </div>
+          <RatioLegend
+            splitEconDis={splitEconDis}
+            splitSwD={splitSwD}
+            onToggleEconDis={() => setSplitEconDis(v => !v)}
+            onToggleSwD={() => setSplitSwD(v => !v)}
+          />
         }
       >
         <Line data={ratiosData} options={ratiosOptions} />
       </Mini>
     </div>
+  )
+}
+
+function RatioLegend({ splitEconDis, splitSwD, onToggleEconDis, onToggleSwD }) {
+  return (
+    <div className="flex items-center gap-2 text-[9px]" style={{ color: 'var(--color-text-tertiary)' }}>
+      <Swatch color={COLOR_OVERALL} label="Overall" />
+      <SplitPill
+        color={COLOR_ECON}
+        label="Econ Dis"
+        active={splitEconDis}
+        onClick={onToggleEconDis}
+        title="Split into Free / Reduced-Price meals"
+      />
+      <Swatch color={COLOR_EL} label="EL" />
+      <SplitPill
+        color={COLOR_SWD}
+        label="SwD"
+        active={splitSwD}
+        onClick={onToggleSwD}
+        title="Split into 7 disability sub-types"
+      />
+    </div>
+  )
+}
+
+function Swatch({ color, label, dashed }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span
+        style={{
+          display: 'inline-block',
+          width: 12,
+          height: 0,
+          borderTop: `${dashed ? '1.5px dashed' : '1.5px solid'} ${color}`,
+        }}
+      />
+      {label}
+    </span>
+  )
+}
+
+function SplitPill({ color, label, active, onClick, title }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="inline-flex items-center gap-1 rounded px-1 py-0.5"
+      style={{
+        background: active ? 'rgba(0,0,0,0.05)' : 'transparent',
+        color: 'var(--color-text-tertiary)',
+        border: '0.5px solid transparent',
+      }}
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          width: 12,
+          height: 0,
+          borderTop: `1.5px solid ${color}`,
+        }}
+      />
+      {label}
+      <span style={{ fontSize: 8, marginLeft: 1 }}>{active ? '▾' : '▸'}</span>
+    </button>
   )
 }
 
@@ -151,7 +257,7 @@ function Mini({ title, empty, legend, children }) {
         border: '0.5px solid var(--color-border-tertiary)',
       }}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-1">
         <div className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>{title}</div>
         {legend}
       </div>
@@ -163,21 +269,5 @@ function Mini({ title, empty, legend, children }) {
         ) : children}
       </div>
     </div>
-  )
-}
-
-function Swatch({ color, label, dashed }) {
-  return (
-    <span className="flex items-center gap-1">
-      <span
-        style={{
-          display: 'inline-block',
-          width: 14,
-          height: 0,
-          borderTop: `${dashed ? '1.5px dashed' : '1.5px solid'} ${color}`,
-        }}
-      />
-      {label}
-    </span>
   )
 }
