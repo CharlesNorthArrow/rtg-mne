@@ -180,7 +180,7 @@ export default function MapView({
         ['==', ['get', 'GEOID'], selectedGeoid], 0.92,
         0.35,
       ]
-    } else if (countyFiltered && visibleGeoids !== 'all') {
+    } else if (visibleGeoids !== 'all') {
       const arr = [...visibleGeoids]
       opacityExpr = ['case',
         ['in', ['get', 'GEOID'], ['literal', arr]], 0.85,

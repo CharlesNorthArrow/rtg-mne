@@ -23,7 +23,7 @@ import { fetchAll } from './_lib.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const YEAR_MIN = 2009
-const YEAR_MAX = 2024
+const YEAR_MAX = 2025   // CSV covers through school-year 2025-26 (start year 2025)
 
 // ── 1) Resolve CSV path ────────────────────────────────────────────────
 const csvPath = process.argv[2] || path.join(

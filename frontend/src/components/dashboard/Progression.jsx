@@ -88,7 +88,7 @@ export default function Progression({ progression, year, label }) {
 
   return (
     <div
-      className="flex flex-col p-4"
+      className="flex h-full flex-col p-4"
       style={{
         background: 'var(--color-background-primary)',
         borderRadius: 'var(--radius-md, 8px)',

@@ -42,13 +42,6 @@ export default function ControlStrip({
         selected={selectedCounties}
         onChange={onCountiesChange}
       />
-      <NeedFilter
-        value={needThresholds}
-        onChange={onNeedChange}
-        onReset={onNeedReset}
-        visibleCount={visibleCount}
-        totalCount={totalCount}
-      />
       <DistrictFilter
         districts={districts}
         selectedGeoid={selectedDistrictGeoid}
@@ -56,6 +49,13 @@ export default function ControlStrip({
       />
       <MetricToggle value={metric} onChange={onMetricChange} />
       <AgeToggle value={age} onChange={onAgeChange} />
+      <NeedFilter
+        value={needThresholds}
+        onChange={onNeedChange}
+        onReset={onNeedReset}
+        visibleCount={visibleCount}
+        totalCount={totalCount}
+      />
       <Playback
         yearRange={yearRange}
         year={year}
