@@ -15,8 +15,12 @@ export default function AdminLayout() {
         <div className="px-3 py-2 text-xs uppercase text-gray-500">Admin</div>
         <NavLink to="/admin/upload"  className={linkClass}>Upload</NavLink>
         <NavLink to="/admin/census"  className={linkClass}>Census</NavLink>
-        <NavLink to="/admin/config"  className={linkClass}>Config</NavLink>
-        <NavLink to="/admin/audit"   className={linkClass}>Audit Log</NavLink>
+        <NavLink to="/admin/config"  className={linkClass}>
+          Config <span className="text-[10px] text-gray-400">(soon)</span>
+        </NavLink>
+        <NavLink to="/admin/audit"   className={linkClass}>
+          Audit Log <span className="text-[10px] text-gray-400">(soon)</span>
+        </NavLink>
         <div className="mt-auto pt-4 border-t border-gray-200 text-xs text-gray-500">
           <div className="px-3 truncate">{user?.email}</div>
           <button

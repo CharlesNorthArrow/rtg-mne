@@ -104,6 +104,27 @@ export default function DashboardPage() {
     return districtsList.filter(d => s.has(d.county))
   }, [districtsList, selectedCounties])
 
+  // Per-district series of (year, total, ed, el, swd) sorted ascending —
+  // used by the Need filter to fall back to the most recent year with data
+  // when the selected year hasn't been published yet for a given subgroup
+  // (e.g. 2025-26 SwD counts aren't out from CSDE yet).
+  const subgroupSeriesByGeoid = useMemo(() => {
+    const map = new Map()
+    for (const r of panel || []) {
+      const key = r.school_district_geoid
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push({
+        year:  r.year,
+        total: r.doe_total_enrollment,
+        ed:    r.doe_econ_dis_count,
+        el:    r.doe_english_learner_count,
+        swd:   r.doe_swd_count,
+      })
+    }
+    for (const arr of map.values()) arr.sort((a, b) => a.year - b.year)
+    return map
+  }, [panel])
+
   const visibleGeoids = useMemo(() => {
     const t = selectedNeedThresholds
     const needActive = t !== NO_NEED_THRESHOLDS &&
@@ -111,28 +132,34 @@ export default function DashboardPage() {
     const countySet = selectedCounties.length ? new Set(selectedCounties) : null
     if (!countySet && !needActive) return 'all'
 
-    const yearRows = rowsByYear.get(year) || []
-    const rowByGeoid = new Map()
-    for (const r of yearRows) rowByGeoid.set(r.school_district_geoid, r)
+    // Latest share ≤ year for this geoid where (count + total) are both known.
+    // Returns null if this subgroup has never been reported for the district.
+    const latestShare = (arr, countKey) => {
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const r = arr[i]
+        if (r.year > year) continue
+        if (r[countKey] != null && r.total != null && r.total > 0) return r[countKey] / r.total
+      }
+      return null
+    }
 
     const out = new Set()
     for (const d of districtsList) {
       if (countySet && !countySet.has(d.county)) continue
       if (needActive) {
-        const r = rowByGeoid.get(d.school_district_geoid)
-        const total = r?.doe_total_enrollment
-        if (!r || !total) continue            // no enrollment denominator → excluded when need filter active
-        const eShare = (r.doe_econ_dis_count          ?? 0) / total
-        const lShare = (r.doe_english_learner_count   ?? 0) / total
-        const sShare = (r.doe_swd_count               ?? 0) / total
-        if (eShare < t.econDis / 100) continue
-        if (lShare < t.englishLearner / 100) continue
-        if (sShare < t.swd / 100) continue
+        const arr = subgroupSeriesByGeoid.get(d.school_district_geoid)
+        if (!arr) continue
+        const eShare = latestShare(arr, 'ed')
+        const lShare = latestShare(arr, 'el')
+        const sShare = latestShare(arr, 'swd')
+        if (t.econDis        > 0 && (eShare == null || eShare < t.econDis        / 100)) continue
+        if (t.englishLearner > 0 && (lShare == null || lShare < t.englishLearner / 100)) continue
+        if (t.swd            > 0 && (sShare == null || sShare < t.swd            / 100)) continue
       }
       out.add(d.school_district_geoid)
     }
     return out
-  }, [districtsList, selectedCounties, selectedNeedThresholds, rowsByYear, year])
+  }, [districtsList, selectedCounties, selectedNeedThresholds, subgroupSeriesByGeoid, year])
 
   useEffect(() => {
     if (!selectedGeoid) return

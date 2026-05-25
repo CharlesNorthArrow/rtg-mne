@@ -14,12 +14,13 @@ async function getAuthHeader() {
 
 export async function apiFetch(path, options = {}) {
   const authHeaders = options.auth ? await getAuthHeader() : {}
+  const timeoutMs = options.timeoutMs ?? 8000
   let res
   try {
     res = await fetch(`${API}${path}`, {
       ...options,
       headers: { ...authHeaders, ...options.headers },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
   } catch (e) {
     if (e.name === 'TimeoutError') throw new Error(`Request to ${path} timed out — is the backend connected to Supabase?`)
@@ -31,6 +32,10 @@ export async function apiFetch(path, options = {}) {
   }
   return res.json()
 }
+
+// Admin POST operations involve spatial joins, Census API round-trips, and
+// full-panel recomputes — well past the 8s default.
+const ADMIN_LONG_TIMEOUT = 60000
 
 // Public data helpers
 export const api = {
@@ -49,10 +54,10 @@ export const api = {
 
 // Admin helpers (require auth)
 export const adminApi = {
-  uploadBooks: (formData) => apiFetch('/api/admin/upload-books', { method: 'POST', body: formData, auth: true }),
-  uploadDoe: (formData) => apiFetch('/api/admin/upload-doe', { method: 'POST', body: formData, auth: true }),
-  censusRefresh: () => apiFetch('/api/admin/census-refresh', { method: 'POST', auth: true }),
+  uploadBooks: (formData) => apiFetch('/api/admin/upload-books', { method: 'POST', body: formData, auth: true, timeoutMs: ADMIN_LONG_TIMEOUT }),
+  uploadDoe: (formData) => apiFetch('/api/admin/upload-doe', { method: 'POST', body: formData, auth: true, timeoutMs: ADMIN_LONG_TIMEOUT }),
+  censusRefresh: () => apiFetch('/api/admin/census-refresh', { method: 'POST', auth: true, timeoutMs: ADMIN_LONG_TIMEOUT }),
   getConfig: () => apiFetch('/api/admin/config', { auth: true }),
-  updateConfig: (config) => apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify(config), headers: { 'Content-Type': 'application/json' }, auth: true }),
+  updateConfig: (config) => apiFetch('/api/admin/config', { method: 'PUT', body: JSON.stringify(config), headers: { 'Content-Type': 'application/json' }, auth: true, timeoutMs: ADMIN_LONG_TIMEOUT }),
   getRuns: () => apiFetch('/api/admin/runs', { auth: true }),
 }
