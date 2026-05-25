@@ -13,8 +13,9 @@ export default function MethodologyPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-10 space-y-10" style={{ color: 'var(--color-text-primary)' }}>
       <Header />
+      <LevelSelector />
       <ExecutiveSummary />
-      <Section title="What does the dashboard show?">
+      <Section id="walkthrough" title="What does the dashboard show?">
         <WhatThisShows />
       </Section>
       <Section title="How we group districts into tiers">
@@ -37,6 +38,34 @@ export default function MethodologyPage() {
   )
 }
 
+// ── Level selector ─────────────────────────────────────────────────────
+function LevelSelector() {
+  const jumpTo = (target) => (e) => {
+    e.preventDefault()
+    const el = document.getElementById(target)
+    if (!el) return
+    if (el.tagName === 'DETAILS') el.open = true
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  const linkStyle = { color: 'var(--color-brand-blue, #243A78)' }
+  return (
+    <div className="-mt-6 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+      How much detail do you want?{' '}
+      <a href="#overview" onClick={jumpTo('overview')} className="underline" style={linkStyle}>
+        1-minute overview
+      </a>
+      {' · '}
+      <a href="#walkthrough" onClick={jumpTo('walkthrough')} className="underline" style={linkStyle}>
+        5-minute walkthrough
+      </a>
+      {' · '}
+      <a href="#technical" onClick={jumpTo('technical')} className="underline" style={linkStyle}>
+        Technical detail
+      </a>
+    </div>
+  )
+}
+
 // ── Header ─────────────────────────────────────────────────────────────
 function Header() {
   return (
@@ -49,9 +78,9 @@ function Header() {
   )
 }
 
-function Section({ title, children }) {
+function Section({ id, title, children }) {
   return (
-    <section>
+    <section id={id} className="scroll-mt-6">
       <h2 className="text-xl font-semibold mb-3">{title}</h2>
       <div className="space-y-4 text-[15px] leading-relaxed">
         {children}
@@ -64,15 +93,32 @@ function Section({ title, children }) {
 function ExecutiveSummary() {
   return (
     <section
-      className="px-5 py-4 text-[15px] leading-relaxed"
+      id="overview"
+      className="px-5 py-5 space-y-4 text-[15px] leading-relaxed scroll-mt-6"
       style={{
         background: 'var(--color-background-primary)',
         borderRadius: 'var(--radius-md, 8px)',
         border: '0.5px solid var(--color-border-tertiary)',
       }}
     >
+      <h2 className="text-xl font-semibold flex items-center gap-2 flex-wrap">
+        <span aria-hidden="true">💡</span>
+        <span>How We Measure Our Reach</span>
+        <span
+          className="text-sm font-normal"
+          style={{ color: 'var(--color-text-tertiary)' }}
+        >
+          (one-minute methodology)
+        </span>
+      </h2>
       <p>
-        Read to Grow puts free books into the hands of Connecticut children so they grow up with stories at home. This dashboard shows where those books are reaching kids, district by district and year by year. The map gives you the picture at a glance; the year slider lets you watch the work develop over time. Every public school district in Connecticut is included — including the ones we haven’t reached yet — so no community gets quietly hidden from the story.
+        Read to Grow’s mission is to promote language skills and literacy for Connecticut’s children, beginning at birth — ensuring that every family, regardless of circumstance, has books at home and the knowledge to use them. Since 1998, we have distributed more than 2.4 million books across the state through our Books for Kids and Bookmobile programs. This dashboard is how we measure whether those books are reaching the children who need them most.
+      </p>
+      <p>
+        For each of Connecticut’s 158 school districts, we calculate a reach ratio: the estimated number of books distributed per child aged 0–9, based on a three-year average of our distribution data. Using a three-year window reduces the effect of any single unusual year and gives a more stable picture of our presence in each community. We report this ratio for all children in a district and separately for high-needs children — those who are economically disadvantaged, English learners, or students with disabilities — because equitable reach matters as much as overall reach.
+      </p>
+      <p>
+        Each district is assigned a tier from 0 to 5 based on where its ratio falls against a fixed set of benchmarks. These benchmarks do not change from year to year. That is deliberate: a district moving from Tier 2 to Tier 3 represents real growth in our reach, not a shift in how we define the tiers. Districts we have not yet reached are included at Tier 0 — no community is left out of the picture.
       </p>
     </section>
   )
@@ -214,7 +260,8 @@ function TechnicallyCurious() {
   return (
     <section>
       <details
-        className="px-5 py-4"
+        id="technical"
+        className="px-5 py-4 scroll-mt-6"
         style={{
           background: 'var(--color-background-primary)',
           borderRadius: 'var(--radius-md, 8px)',
