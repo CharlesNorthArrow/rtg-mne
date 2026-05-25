@@ -1,7 +1,7 @@
 // Pure derivers for the district-detail right column (Phase 3).
 // Take the full panel + a geoid and compute the per-district views.
 
-import { TIER_COEFFICIENTS, ratioFieldName } from './tiers.js'
+import { ratioFieldName } from './tiers.js'
 
 // ── One district's rows, sorted by year ─────────────────────────────────
 export function districtSeries(panel, geoid) {
@@ -36,39 +36,22 @@ export function lifetimeRows(series) {
   return out
 }
 
-// ── Per-age helpers ─────────────────────────────────────────────────────
-const POP_FIELD_BY_AGE  = { '0_4': 'census_pop_0_4', '0_9': 'census_pop_0_9', '5_9': 'census_pop_5_9' }
-const COEFF_BY_AGE      = { '0_4': 'coeff_0_4',      '0_9': 'coeff_0_9',     '5_9': 'coeff_5_9' }
-
-// Subgroup-ratio formula: (books * coeff_age) / (census_pop_age * subgroup_pct)
-// where subgroup_pct = doe_<subgroup>_count / doe_total_enrollment. NULL when
-// any input is missing.
-function subgroupRatio(row, age, subgroupCountField) {
-  const books = row.rolling_3yr_combined
-  const pop   = row[POP_FIELD_BY_AGE[age]]
-  const total = row.doe_total_enrollment
-  const sub   = row[subgroupCountField]
-  if (books == null || pop == null || pop === 0 || total == null || total === 0 || sub == null) return null
-  const coeff = TIER_COEFFICIENTS[COEFF_BY_AGE[age]]
-  return (books * coeff) / (pop * (sub / total))
-}
-
 // ── Demographics series ────────────────────────────────────────────────
-// Returns the data backing the right-side mini chart in district mode:
-//   { years, hnPct, ratioOverall, ratioHn, ratioEconDis, ratioEL, ratioSwD,
-//     econDisSplit: { freeMeals, reducedPrice },
-//     swdSplit: { autism, emotional, intellectual, learning, other, otherHealth, speech } }
+// Returns data for the two right-column mini charts.
 //
-// ratioOverall / ratioHn read precomputed DB columns (so they include the H8
-// proxy + G1+D2 zero-reach math). The subgroup ratios are computed here
-// against the matching age band; their split arrays are derived the same way
-// from the granular count columns.
+// LEFT chart — share of enrolled students by subgroup:
+//   econDisShare / elShare / swdShare = count / doe_total_enrollment.
+//   Plus optional split arrays for Econ Dis (Free / Reduced Price) and
+//   SwD (7 disability sub-types).
+//
+// RIGHT chart — Overall vs HN books-per-child ratio (precomputed in DB,
+// so it picks up H8 proxy + G1+D2 zero-reach behaviour for free).
 export function demographicsSeries(series, age) {
   const empty = {
-    years: [], hnPct: [], ratioOverall: [], ratioHn: [],
-    ratioEconDis: [], ratioEL: [], ratioSwD: [],
-    econDisSplit: { freeMeals: [], reducedPrice: [] },
-    swdSplit: {
+    years: [], ratioOverall: [], ratioHn: [],
+    econDisShare: [], elShare: [], swdShare: [],
+    econDisSplitShare: { freeMeals: [], reducedPrice: [] },
+    swdSplitShare: {
       autism: [], emotional: [], intellectual: [], learning: [],
       other: [], otherHealth: [], speech: [],
     },
@@ -78,27 +61,32 @@ export function demographicsSeries(series, age) {
   const ratioField   = ratioFieldName('overall', age)
   const ratioHnField = ratioFieldName('hn',      age)
 
-  const out = {
+  const shareOf = (countField) => sorted.map(r => {
+    const c = r[countField]
+    const t = r.doe_total_enrollment
+    if (c == null || t == null || t === 0) return null
+    return c / t
+  })
+
+  return {
     years:        sorted.map(r => r.year),
-    hnPct:        sorted.map(r => r.doe_high_needs_pct ?? null),
     ratioOverall: sorted.map(r => r[ratioField] ?? null),
     ratioHn:      sorted.map(r => r[ratioHnField] ?? null),
-    ratioEconDis: sorted.map(r => subgroupRatio(r, age, 'doe_econ_dis_count')),
-    ratioEL:      sorted.map(r => subgroupRatio(r, age, 'doe_english_learner_count')),
-    ratioSwD:     sorted.map(r => subgroupRatio(r, age, 'doe_swd_count')),
-    econDisSplit: {
-      freeMeals:    sorted.map(r => subgroupRatio(r, age, 'doe_free_meals_count')),
-      reducedPrice: sorted.map(r => subgroupRatio(r, age, 'doe_reduced_price_count')),
+    econDisShare: shareOf('doe_econ_dis_count'),
+    elShare:      shareOf('doe_english_learner_count'),
+    swdShare:     shareOf('doe_swd_count'),
+    econDisSplitShare: {
+      freeMeals:    shareOf('doe_free_meals_count'),
+      reducedPrice: shareOf('doe_reduced_price_count'),
     },
-    swdSplit: {
-      autism:       sorted.map(r => subgroupRatio(r, age, 'doe_swd_autism_count')),
-      emotional:    sorted.map(r => subgroupRatio(r, age, 'doe_swd_emotional_count')),
-      intellectual: sorted.map(r => subgroupRatio(r, age, 'doe_swd_intellectual_count')),
-      learning:     sorted.map(r => subgroupRatio(r, age, 'doe_swd_learning_count')),
-      other:        sorted.map(r => subgroupRatio(r, age, 'doe_swd_other_count')),
-      otherHealth:  sorted.map(r => subgroupRatio(r, age, 'doe_swd_other_health_count')),
-      speech:       sorted.map(r => subgroupRatio(r, age, 'doe_swd_speech_count')),
+    swdSplitShare: {
+      autism:       shareOf('doe_swd_autism_count'),
+      emotional:    shareOf('doe_swd_emotional_count'),
+      intellectual: shareOf('doe_swd_intellectual_count'),
+      learning:     shareOf('doe_swd_learning_count'),
+      other:        shareOf('doe_swd_other_count'),
+      otherHealth:  shareOf('doe_swd_other_health_count'),
+      speech:       shareOf('doe_swd_speech_count'),
     },
   }
-  return out
 }

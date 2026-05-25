@@ -15,15 +15,16 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartToo
 ChartJS.register(makeVerticalYearLinePlugin('verticalYearLineDemographics'))
 
 const COLOR_OVERALL = '#243A78'  // brand blue
-const COLOR_ECON    = '#B2182B'  // tier-0 red (HN's dominant subgroup)
+const COLOR_HN      = '#B2182B'  // tier-0 red
+const COLOR_ECON    = '#B2182B'  // EconDis is the dominant HN subgroup, uses the same red
 const COLOR_EL      = '#EF8A62'  // tier-1 lighter red-orange
 const COLOR_SWD     = '#6B7280'  // slate
 
-// Lighter shades of EconDis red for the Free/Reduced split.
+// Lighter shades for Free vs Reduced Price split
 const COLOR_FREE    = '#B2182B'
 const COLOR_REDUCED = '#EF8A62'
 
-// Small categorical palette for the 7 SwD subtypes (Tableau 10-ish).
+// Small categorical palette for the 7 SwD subtypes
 const COLOR_SWD_SUB = {
   autism:       '#1f77b4',
   emotional:    '#ff7f0e',
@@ -32,12 +33,6 @@ const COLOR_SWD_SUB = {
   other:        '#8c564b',
   otherHealth:  '#e377c2',
   speech:       '#17becf',
-}
-
-const SUBGROUP_LABEL = {
-  econDis: 'Economically Disadvantaged',
-  el:      'English Learners',
-  swd:     'Students with Disabilities',
 }
 
 const SWD_LABEL = {
@@ -61,47 +56,53 @@ function lineDataset({ label, data, color, dashed = false }) {
 
 export default function DemographicsContext({ demographics, age, year }) {
   const {
-    years, hnPct, ratioOverall,
-    ratioEconDis, ratioEL, ratioSwD,
-    econDisSplit, swdSplit,
+    years, ratioOverall, ratioHn,
+    econDisShare, elShare, swdShare,
+    econDisSplitShare, swdSplitShare,
   } = demographics
 
   const [splitEconDis, setSplitEconDis] = useState(false)
   const [splitSwD, setSplitSwD]         = useState(false)
 
   const labels = useMemo(() => years.map(String), [years])
-  const hasAnyHn = hnPct.some(v => v != null && !isNaN(v))
 
-  // HN-share mini-chart (unchanged)
-  const hnData = useMemo(() => ({
-    labels,
-    datasets: [lineDataset({ label: 'High-needs share', data: hnPct.map(v => v == null ? null : v * 100), color: COLOR_ECON })],
-  }), [labels, hnPct])
-
-  // Build the ratio chart datasets: Overall + 3 subgroups (or splits when toggled).
-  const ratiosData = useMemo(() => {
-    const ds = [lineDataset({ label: 'Overall', data: ratioOverall, color: COLOR_OVERALL })]
+  // ── Left: subgroup share over time (default 3 lines + 2 toggles) ────
+  const shareData = useMemo(() => {
+    const toPct = (arr) => arr.map(v => v == null ? null : v * 100)
+    const ds = []
 
     if (splitEconDis) {
-      ds.push(lineDataset({ label: 'Free meals',    data: econDisSplit.freeMeals,    color: COLOR_FREE }))
-      ds.push(lineDataset({ label: 'Reduced price', data: econDisSplit.reducedPrice, color: COLOR_REDUCED, dashed: true }))
+      ds.push(lineDataset({ label: 'Free meals',    data: toPct(econDisSplitShare.freeMeals),    color: COLOR_FREE }))
+      ds.push(lineDataset({ label: 'Reduced price', data: toPct(econDisSplitShare.reducedPrice), color: COLOR_REDUCED, dashed: true }))
     } else {
-      ds.push(lineDataset({ label: SUBGROUP_LABEL.econDis, data: ratioEconDis, color: COLOR_ECON }))
+      ds.push(lineDataset({ label: 'Econ Dis', data: toPct(econDisShare), color: COLOR_ECON }))
     }
 
-    ds.push(lineDataset({ label: SUBGROUP_LABEL.el, data: ratioEL, color: COLOR_EL }))
+    ds.push(lineDataset({ label: 'English Learners', data: toPct(elShare), color: COLOR_EL }))
 
     if (splitSwD) {
       for (const k of ['autism','emotional','intellectual','learning','other','otherHealth','speech']) {
-        ds.push(lineDataset({ label: SWD_LABEL[k], data: swdSplit[k], color: COLOR_SWD_SUB[k] }))
+        ds.push(lineDataset({ label: SWD_LABEL[k], data: toPct(swdSplitShare[k]), color: COLOR_SWD_SUB[k] }))
       }
     } else {
-      ds.push(lineDataset({ label: SUBGROUP_LABEL.swd, data: ratioSwD, color: COLOR_SWD }))
+      ds.push(lineDataset({ label: 'Students w/ Disabilities', data: toPct(swdShare), color: COLOR_SWD }))
     }
     return { labels, datasets: ds }
-  }, [labels, ratioOverall, ratioEconDis, ratioEL, ratioSwD, econDisSplit, swdSplit, splitEconDis, splitSwD])
+  }, [labels, econDisShare, elShare, swdShare, econDisSplitShare, swdSplitShare, splitEconDis, splitSwD])
 
-  const hasAnyRatio = ratiosData.datasets.some(d => d.data.some(v => v != null && !isNaN(v)))
+  const hasAnyShare = shareData.datasets.some(d => d.data.some(v => v != null && !isNaN(v)))
+
+  // ── Right: Overall vs HN ratio (clean 2-line chart) ──────────────────
+  const ratiosData = useMemo(() => ({
+    labels,
+    datasets: [
+      lineDataset({ label: 'Overall', data: ratioOverall, color: COLOR_OVERALL }),
+      lineDataset({ label: 'High-needs', data: ratioHn, color: COLOR_HN, dashed: true }),
+    ],
+  }), [labels, ratioOverall, ratioHn])
+
+  const hasAnyRatio = ratioOverall.some(v => v != null && !isNaN(v))
+                  || ratioHn.some(v => v != null && !isNaN(v))
 
   const baseOptions = useMemo(() => ({
     responsive: true,
@@ -125,14 +126,14 @@ export default function DemographicsContext({ demographics, age, year }) {
     animation: false,
   }), [year])
 
-  const hnOptions = useMemo(() => ({
+  const shareOptions = useMemo(() => ({
     ...baseOptions,
     plugins: {
       ...baseOptions.plugins,
       tooltip: {
         callbacks: {
           title: items => `Year ${items[0].label}`,
-          label: ctx => `HN share: ${ctx.parsed.y == null ? '—' : ctx.parsed.y.toFixed(1) + '%'}`,
+          label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y == null ? '—' : ctx.parsed.y.toFixed(1) + '%'}`,
         },
       },
     },
@@ -160,19 +161,36 @@ export default function DemographicsContext({ demographics, age, year }) {
 
   return (
     <div className="flex flex-1 min-h-0 gap-3">
-      <Mini title="High-needs share over time" empty={!hasAnyHn}>
-        <Line data={hnData} options={hnOptions} />
-      </Mini>
       <Mini
-        title={`Books per child by group · ${AGE_LABELS[age]}`}
-        empty={!hasAnyRatio}
+        title="High-needs share over time"
+        empty={!hasAnyShare}
         legend={
-          <RatioLegend
+          <ShareLegend
             splitEconDis={splitEconDis}
             splitSwD={splitSwD}
             onToggleEconDis={() => setSplitEconDis(v => !v)}
             onToggleSwD={() => setSplitSwD(v => !v)}
           />
+        }
+        footer={
+          <SplitControls
+            splitEconDis={splitEconDis}
+            splitSwD={splitSwD}
+            onToggleEconDis={() => setSplitEconDis(v => !v)}
+            onToggleSwD={() => setSplitSwD(v => !v)}
+          />
+        }
+      >
+        <Line data={shareData} options={shareOptions} />
+      </Mini>
+      <Mini
+        title={`Books per child · ${AGE_LABELS[age]}`}
+        empty={!hasAnyRatio}
+        legend={
+          <div className="flex items-center gap-3 text-[9px]" style={{ color: 'var(--color-text-tertiary)' }}>
+            <Swatch color={COLOR_OVERALL} label="Overall" />
+            <Swatch color={COLOR_HN} label="High-needs" dashed />
+          </div>
         }
       >
         <Line data={ratiosData} options={ratiosOptions} />
@@ -181,26 +199,65 @@ export default function DemographicsContext({ demographics, age, year }) {
   )
 }
 
-function RatioLegend({ splitEconDis, splitSwD, onToggleEconDis, onToggleSwD }) {
+function ShareLegend({ splitEconDis, splitSwD }) {
   return (
     <div className="flex items-center gap-2 text-[9px]" style={{ color: 'var(--color-text-tertiary)' }}>
-      <Swatch color={COLOR_OVERALL} label="Overall" />
-      <SplitPill
-        color={COLOR_ECON}
-        label="Econ Dis"
-        active={splitEconDis}
-        onClick={onToggleEconDis}
-        title="Split into Free / Reduced-Price meals"
-      />
+      {splitEconDis ? (
+        <>
+          <Swatch color={COLOR_FREE} label="Free" />
+          <Swatch color={COLOR_REDUCED} label="Reduced" dashed />
+        </>
+      ) : (
+        <Swatch color={COLOR_ECON} label="Econ Dis" />
+      )}
       <Swatch color={COLOR_EL} label="EL" />
-      <SplitPill
-        color={COLOR_SWD}
-        label="SwD"
-        active={splitSwD}
-        onClick={onToggleSwD}
-        title="Split into 7 disability sub-types"
-      />
+      {splitSwD ? (
+        <span style={{ color: 'var(--color-text-tertiary)' }}>SwD: 7 types ▾</span>
+      ) : (
+        <Swatch color={COLOR_SWD} label="SwD" />
+      )}
     </div>
+  )
+}
+
+function SplitControls({ splitEconDis, splitSwD, onToggleEconDis, onToggleSwD }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-1.5 text-[10px]">
+      <ExpandPill active={splitEconDis} onClick={onToggleEconDis}>
+        Free / Reduced split
+      </ExpandPill>
+      <ExpandPill active={splitSwD} onClick={onToggleSwD}>
+        Disability types
+      </ExpandPill>
+    </div>
+  )
+}
+
+function ExpandPill({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium transition-colors"
+      style={{
+        background: active ? 'var(--color-background-secondary)' : 'var(--color-background-primary)',
+        border: `0.5px solid ${active ? 'var(--color-text-tertiary)' : 'var(--color-border-secondary)'}`,
+        color: 'var(--color-text-secondary)',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center justify-center"
+        style={{
+          width: 14, height: 14, borderRadius: 999,
+          border: '0.5px solid var(--color-text-tertiary)',
+          fontSize: 11, lineHeight: 1, fontWeight: 600,
+        }}
+      >
+        {active ? '−' : '+'}
+      </span>
+      {children}
+    </button>
   )
 }
 
@@ -210,7 +267,7 @@ function Swatch({ color, label, dashed }) {
       <span
         style={{
           display: 'inline-block',
-          width: 12,
+          width: 14,
           height: 0,
           borderTop: `${dashed ? '1.5px dashed' : '1.5px solid'} ${color}`,
         }}
@@ -220,34 +277,7 @@ function Swatch({ color, label, dashed }) {
   )
 }
 
-function SplitPill({ color, label, active, onClick, title }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className="inline-flex items-center gap-1 rounded px-1 py-0.5"
-      style={{
-        background: active ? 'rgba(0,0,0,0.05)' : 'transparent',
-        color: 'var(--color-text-tertiary)',
-        border: '0.5px solid transparent',
-      }}
-    >
-      <span
-        style={{
-          display: 'inline-block',
-          width: 12,
-          height: 0,
-          borderTop: `1.5px solid ${color}`,
-        }}
-      />
-      {label}
-      <span style={{ fontSize: 8, marginLeft: 1 }}>{active ? '▾' : '▸'}</span>
-    </button>
-  )
-}
-
-function Mini({ title, empty, legend, children }) {
+function Mini({ title, empty, legend, footer, children }) {
   return (
     <div
       className="flex flex-1 min-h-0 flex-col px-3 py-2"
@@ -268,6 +298,7 @@ function Mini({ title, empty, legend, children }) {
           </div>
         ) : children}
       </div>
+      {footer}
     </div>
   )
 }
