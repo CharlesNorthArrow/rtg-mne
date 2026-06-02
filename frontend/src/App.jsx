@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import PublicLayout from './components/shared/PublicLayout.jsx'
 import AdminLayout from './components/shared/AdminLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
+import OutcomesPage from './pages/OutcomesPage.jsx'
 import MethodologyPage from './pages/MethodologyPage.jsx'
 import UploadPage from './pages/admin/UploadPage.jsx'
 import CensusRefreshPage from './pages/admin/CensusRefreshPage.jsx'
@@ -14,6 +15,7 @@ export default function App() {
       {/* Public routes */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/outcomes" element={<OutcomesPage />} />
         <Route path="/methodology" element={<MethodologyPage />} />
       </Route>
 

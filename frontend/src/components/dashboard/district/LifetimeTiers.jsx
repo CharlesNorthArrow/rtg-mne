@@ -9,7 +9,7 @@ import { TIER_CONFIG, TIER_KEYS, getTierColor } from '../../../lib/tiers.js'
 // drawn as a faint line overlay so the bar story and the volume story
 // can be read together.
 
-const MIN_HEIGHT  = 170
+const DEFAULT_MIN_HEIGHT = 170
 const PAD_TOP    = 14
 const PAD_BOTTOM = 26
 const PAD_LEFT   = 12
@@ -35,22 +35,22 @@ function niceCeiling(v) {
   return step * pow
 }
 
-export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
+export default function LifetimeTiers({ lifetime, tierOf, selectedYear, title, minHeight = DEFAULT_MIN_HEIGHT }) {
   const containerRef = useRef(null)
   const svgBoxRef = useRef(null)
   const [width, setWidth] = useState(FALLBACK_W)
-  const [height, setHeight] = useState(MIN_HEIGHT)
+  const [height, setHeight] = useState(minHeight)
 
   useEffect(() => {
     if (!svgBoxRef.current) return
     const ro = new ResizeObserver(entries => {
       const { width: w, height: h } = entries[0].contentRect
       if (w > 0) setWidth(w)
-      if (h > 0) setHeight(Math.max(h, MIN_HEIGHT))
+      if (h > 0) setHeight(Math.max(h, minHeight))
     })
     ro.observe(svgBoxRef.current)
     return () => ro.disconnect()
-  }, [])
+  }, [minHeight])
 
   const years = lifetime.map(d => d.year)
   const yMin  = years[0]
@@ -78,7 +78,7 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
 
   if (lifetime.length === 0) {
     return (
-      <Wrapper containerRef={containerRef} title="Tier lifetime">
+      <Wrapper containerRef={containerRef} title={title ?? 'Tier lifetime'}>
         <div className="flex flex-1 items-center justify-center text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
           No tier data for this district yet.
         </div>
@@ -129,8 +129,8 @@ export default function LifetimeTiers({ lifetime, tierOf, selectedYear }) {
   }, [lifetime, width, booksCeil])
 
   return (
-    <Wrapper containerRef={containerRef} title={`Tier lifetime · ${yMin}–${yMax}`}>
-     <div ref={svgBoxRef} className="flex-1 min-h-0" style={{ minHeight: MIN_HEIGHT }}>
+    <Wrapper containerRef={containerRef} title={title ?? `Tier lifetime · ${yMin}–${yMax}`}>
+     <div ref={svgBoxRef} className="flex-1 min-h-0" style={{ minHeight }}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
         width={width}

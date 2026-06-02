@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/supabase.js'
-import { useDashboardStore, NO_NEED_THRESHOLDS } from '../store/dashboard.js'
+import { useDashboardStore, NO_NEED_THRESHOLDS, NO_OUTCOME_FILTERS, TYPOLOGY_OPTIONS } from '../store/dashboard.js'
 import { useDashboardUrlSync } from '../hooks/useDashboardUrlSync.js'
+import { useOutcomeData } from '../hooks/useOutcomeData.jsx'
 import {
   indexByYear,
   deriveYearRange,
@@ -26,17 +27,46 @@ export default function DashboardPage() {
   const metric                 = useDashboardStore(s => s.selectedMetric)
   const age                    = useDashboardStore(s => s.selectedAge)
   const selectedCounties       = useDashboardStore(s => s.selectedCounties)
+  const selectedTypologies     = useDashboardStore(s => s.selectedTypologies)
   const selectedGeoid          = useDashboardStore(s => s.selectedDistrictGeoid)
   const selectedNeedThresholds = useDashboardStore(s => s.selectedNeedThresholds)
+  const selectedOutcomeFilters = useDashboardStore(s => s.selectedOutcomeFilters)
 
   // Store writers
   const setYear              = useDashboardStore(s => s.setYear)
   const setMetric            = useDashboardStore(s => s.setMetric)
   const setAge               = useDashboardStore(s => s.setAge)
   const setCounties          = useDashboardStore(s => s.setCounties)
+  const setTypologies        = useDashboardStore(s => s.setTypologies)
   const setSelected          = useDashboardStore(s => s.setSelectedDistrict)
   const setNeedThresholds    = useDashboardStore(s => s.setNeedThresholds)
   const resetNeedThresholds  = useDashboardStore(s => s.resetNeedThresholds)
+  const setOutcomeFilters    = useDashboardStore(s => s.setOutcomeFilters)
+  const resetOutcomeFilters  = useDashboardStore(s => s.resetOutcomeFilters)
+
+  // Typology map from ArcGIS (year-independent). May still be loading on
+  // first paint; treat null/empty as "no typology data" — see visibleGeoids
+  // for the no-match-stays-visible rule.
+  const { typologyByGeoid, keiByGeoidYear, elaByGeoidYear } = useOutcomeData()
+
+  // ELA slider range comes from the actual data across all years/districts
+  // (the slider is one-knob and persists across year changes, so the bounds
+  // are global, not per-year). Defaults to 0–100 while data is loading so
+  // the slider is interactable but neutral.
+  const elaRange = useMemo(() => {
+    if (!elaByGeoidYear) return { min: 0, max: 100 }
+    let lo = Infinity, hi = -Infinity
+    for (const years of Object.values(elaByGeoidYear)) {
+      for (const row of Object.values(years)) {
+        const v = row.ela_index_all
+        if (v == null) continue
+        if (v < lo) lo = v
+        if (v > hi) hi = v
+      }
+    }
+    if (lo === Infinity) return { min: 0, max: 100 }
+    return { min: Math.floor(lo), max: Math.ceil(hi) }
+  }, [elaByGeoidYear])
 
   // Local state
   const [panel, setPanel]         = useState(null)
@@ -125,12 +155,53 @@ export default function DashboardPage() {
     return map
   }, [panel])
 
+  // Districts that have NO outcome data for the currently selected year.
+  // Per goal: do not filter them out — show at 40% opacity instead. The set
+  // is only meaningful when at least one outcome slider is active; otherwise
+  // we return null so MapView can skip the special pass.
+  // True when at least one district in the visible list has ELA data for the
+  // currently selected year. When false, the ELA slider is greyed out and
+  // contributes nothing to the filter (so we don't accidentally hide cards).
+  const elaHasYearData = useMemo(() => {
+    if (!elaByGeoidYear || year == null) return false
+    for (const d of districtsList) {
+      const v = elaByGeoidYear[d.school_district_geoid]?.[year]?.ela_index_all
+      if (v != null) return true
+    }
+    return false
+  }, [elaByGeoidYear, year, districtsList])
+
+  const outcomeActive = useMemo(() => {
+    const o = selectedOutcomeFilters
+    if (o === NO_OUTCOME_FILTERS) return false
+    const elaLowActive  = o.elaMin != null && o.elaMin > elaRange.min
+    const elaHighActive = o.elaMax != null && o.elaMax < elaRange.max
+    return (o.keiLowMin > 0) || (o.keiHighMin > 0)
+      || (elaHasYearData && (elaLowActive || elaHighActive))
+  }, [selectedOutcomeFilters, elaRange.min, elaRange.max, elaHasYearData])
+
+  const noOutcomeGeoids = useMemo(() => {
+    if (!outcomeActive) return null
+    const out = new Set()
+    for (const d of districtsList) {
+      const g  = d.school_district_geoid
+      const k  = keiByGeoidYear?.[g]?.[year]
+      const e  = elaByGeoidYear?.[g]?.[year]
+      const hasKei = k && (k.li_pct1 != null || k.li_pct3 != null)
+      const hasEla = e && e.ela_index_all != null
+      if (!hasKei && !hasEla) out.add(g)
+    }
+    return out
+  }, [outcomeActive, districtsList, keiByGeoidYear, elaByGeoidYear, year])
+
   const visibleGeoids = useMemo(() => {
     const t = selectedNeedThresholds
+    const o = selectedOutcomeFilters
     const needActive = t !== NO_NEED_THRESHOLDS &&
       (t.econDis > 0 || t.englishLearner > 0 || t.swd > 0)
-    const countySet = selectedCounties.length ? new Set(selectedCounties) : null
-    if (!countySet && !needActive) return 'all'
+    const countySet    = selectedCounties.length   ? new Set(selectedCounties)   : null
+    const typologySet  = selectedTypologies.length ? new Set(selectedTypologies) : null
+    if (!countySet && !typologySet && !needActive && !outcomeActive) return 'all'
 
     // Latest share ≤ year for this geoid where (count + total) are both known.
     // Returns null if this subgroup has never been reported for the district.
@@ -146,6 +217,12 @@ export default function DashboardPage() {
     const out = new Set()
     for (const d of districtsList) {
       if (countySet && !countySet.has(d.county)) continue
+      if (typologySet) {
+        // Per goal: districts with no typology match remain visible. Only hide
+        // when we have a typology AND it's not in the selected set.
+        const t2 = typologyByGeoid?.[d.school_district_geoid]
+        if (t2 != null && !typologySet.has(t2)) continue
+      }
       if (needActive) {
         const arr = subgroupSeriesByGeoid.get(d.school_district_geoid)
         if (!arr) continue
@@ -156,10 +233,32 @@ export default function DashboardPage() {
         if (t.englishLearner > 0 && (lShare == null || lShare < t.englishLearner / 100)) continue
         if (t.swd            > 0 && (sShare == null || sShare < t.swd            / 100)) continue
       }
+      if (outcomeActive) {
+        // Each slider only filters districts that HAVE a value for that
+        // metric. Missing values for a given slider pass that check — they
+        // can still be hidden by a different slider that DOES have data.
+        // Districts with no outcome data at all for `year` are caught by
+        // noOutcomeGeoids and rendered at 40% opacity instead of hidden.
+        const g = d.school_district_geoid
+        const k = keiByGeoidYear?.[g]?.[year]
+        const e = elaByGeoidYear?.[g]?.[year]
+        // li_pct1 / li_pct3 are stored as 0–1 fractions; sliders are 0–100.
+        // Both KEI sliders are lower bounds — hide districts where the
+        // measured % is BELOW the slider value.
+        if (o.keiLowMin  > 0 && k?.li_pct1 != null && k.li_pct1 * 100 < o.keiLowMin)  continue
+        if (o.keiHighMin > 0 && k?.li_pct3 != null && k.li_pct3 * 100 < o.keiHighMin) continue
+        // ELA range: only apply when the selected year has ELA data; only
+        // each bound when it's off-default. Districts without ELA for the
+        // year fall through (handled by noOutcomeGeoids if they lack KEI too).
+        if (elaHasYearData && e?.ela_index_all != null) {
+          if (o.elaMin != null && o.elaMin > elaRange.min && e.ela_index_all < o.elaMin) continue
+          if (o.elaMax != null && o.elaMax < elaRange.max && e.ela_index_all > o.elaMax) continue
+        }
+      }
       out.add(d.school_district_geoid)
     }
     return out
-  }, [districtsList, selectedCounties, selectedNeedThresholds, subgroupSeriesByGeoid, year])
+  }, [districtsList, selectedCounties, selectedTypologies, typologyByGeoid, selectedNeedThresholds, selectedOutcomeFilters, outcomeActive, elaHasYearData, keiByGeoidYear, elaByGeoidYear, elaRange.min, elaRange.max, subgroupSeriesByGeoid, year])
 
   useEffect(() => {
     if (!selectedGeoid) return
@@ -242,6 +341,9 @@ export default function DashboardPage() {
         counties={counties}
         selectedCounties={selectedCounties}
         onCountiesChange={setCounties}
+        typologyOptions={TYPOLOGY_OPTIONS}
+        selectedTypologies={selectedTypologies}
+        onTypologiesChange={setTypologies}
         districts={filteredDistricts}
         selectedDistrictGeoid={selectedGeoid}
         onDistrictSelect={setSelected}
@@ -251,6 +353,11 @@ export default function DashboardPage() {
         needThresholds={selectedNeedThresholds}
         onNeedChange={setNeedThresholds}
         onNeedReset={resetNeedThresholds}
+        outcomeFilters={selectedOutcomeFilters}
+        onOutcomeChange={setOutcomeFilters}
+        onOutcomeReset={resetOutcomeFilters}
+        elaRange={elaRange}
+        elaDisabled={!elaHasYearData}
         visibleCount={visibleGeoids === 'all' ? districtsList.length : visibleGeoids.size}
         totalCount={districtsList.length}
       />
@@ -264,6 +371,7 @@ export default function DashboardPage() {
             tierOf={tierOf}
             ratioOf={ratioOf}
             visibleGeoids={visibleGeoids}
+            noOutcomeGeoids={noOutcomeGeoids}
             selectedGeoid={selectedGeoid}
             onSelectDistrict={setSelected}
             countyFiltered={selectedCounties.length > 0}

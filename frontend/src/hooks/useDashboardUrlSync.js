@@ -19,12 +19,26 @@ export function useDashboardUrlSync() {
     const m = params.get('metric')
     const a = params.get('age')
     const c = params.get('counties')
+    const t = params.get('typologies')
     const d = params.get('district')
+    const klo  = params.get('keiLowMin')
+    const khi  = params.get('keiHighMin')
+    const elo  = params.get('elaMin')
+    const ehi  = params.get('elaMax')
     if (y) next.selectedYear = parseInt(y)
     if (m === 'overall' || m === 'hn') next.selectedMetric = m
     if (a === '0_4' || a === '0_9' || a === '5_9') next.selectedAge = a
     if (c) next.selectedCounties = c.split(',').filter(Boolean)
+    if (t) next.selectedTypologies = t.split(',').filter(Boolean)
     if (d) next.selectedDistrictGeoid = d
+    if (klo != null || khi != null || elo != null || ehi != null) {
+      next.selectedOutcomeFilters = {
+        keiLowMin:  klo != null ? Number(klo) : 0,
+        keiHighMin: khi != null ? Number(khi) : 0,
+        elaMin:     elo != null ? Number(elo) : null,
+        elaMax:     ehi != null ? Number(ehi) : null,
+      }
+    }
     if (Object.keys(next).length) useDashboardStore.getState().hydrate(next)
     hydrated.current = true
   }, [params])
@@ -38,7 +52,15 @@ export function useDashboardUrlSync() {
       if (s.selectedMetric && s.selectedMetric !== 'overall') next.set('metric', s.selectedMetric)
       if (s.selectedAge && s.selectedAge !== '0_9') next.set('age', s.selectedAge)
       if (s.selectedCounties.length)         next.set('counties', s.selectedCounties.join(','))
+      if (s.selectedTypologies.length)       next.set('typologies', s.selectedTypologies.join(','))
       if (s.selectedDistrictGeoid)           next.set('district', s.selectedDistrictGeoid)
+      const o = s.selectedOutcomeFilters
+      if (o) {
+        if (o.keiLowMin  !== 0)    next.set('keiLowMin',  String(o.keiLowMin))
+        if (o.keiHighMin !== 0)    next.set('keiHighMin', String(o.keiHighMin))
+        if (o.elaMin     !== null) next.set('elaMin',     String(o.elaMin))
+        if (o.elaMax     !== null) next.set('elaMax',     String(o.elaMax))
+      }
       setParams(next, { replace: true })
     })
     return unsub

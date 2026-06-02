@@ -28,6 +28,7 @@ export default function NavBar() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <NavLink to="/" end className={linkClass}>Dashboard</NavLink>
+            <NavLink to="/outcomes" className={linkClass}>Outcomes</NavLink>
             <NavLink to="/methodology" className={linkClass}>Methodology</NavLink>
             <NavLink to="/admin" className={linkClass}>Admin</NavLink>
           </div>

@@ -59,7 +59,7 @@ export default function DistrictPanel({
       />
       <DemographicsContext
         demographics={demographics}
-        age={age}
+        geoid={geoid}
         year={year}
       />
     </div>

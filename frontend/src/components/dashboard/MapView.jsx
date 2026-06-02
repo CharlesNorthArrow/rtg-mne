@@ -59,6 +59,7 @@ export default function MapView({
   tierOf,           // (row) => tier number | null
   ratioOf,          // (row) => ratio | null
   visibleGeoids,    // Set<geoid> | 'all'
+  noOutcomeGeoids,  // Set<geoid> | null — districts lacking outcome data for `year` while an outcome filter is active
   selectedGeoid,
   onSelectDistrict,
   countyFiltered,
@@ -169,7 +170,9 @@ export default function MapView({
     map.setFilter('districts-selected', ['==', ['get', 'GEOID'], selectedGeoid || '__none__'])
   }, [selectedGeoid, styleReady])
 
-  // Dim non-focused districts (county filter) AND highlight selected
+  // Dim non-focused districts (filter) AND highlight selected. Three-way
+  // bucketing when filters are active: 0.85 = passes all filters; 0.4 = passes
+  // composition but lacks outcome data for the year (per goal); 0.12 = hidden.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !styleReady) return
@@ -181,14 +184,16 @@ export default function MapView({
         0.35,
       ]
     } else if (visibleGeoids !== 'all') {
-      const arr = [...visibleGeoids]
+      const visibleArr = [...visibleGeoids]
+      const noDataArr  = noOutcomeGeoids ? [...noOutcomeGeoids] : []
       opacityExpr = ['case',
-        ['in', ['get', 'GEOID'], ['literal', arr]], 0.85,
+        ['in', ['get', 'GEOID'], ['literal', noDataArr]],  0.40,
+        ['in', ['get', 'GEOID'], ['literal', visibleArr]], 0.85,
         0.12,
       ]
     }
     map.setPaintProperty('districts-fill', 'fill-opacity', opacityExpr)
-  }, [selectedGeoid, countyFiltered, visibleGeoids, styleReady])
+  }, [selectedGeoid, countyFiltered, visibleGeoids, noOutcomeGeoids, styleReady])
 
   // Fit bounds when selection / county filter changes
   useEffect(() => {
@@ -273,7 +278,7 @@ export default function MapView({
         <Tooltip x={hover.x} y={hover.y} d={hoveredDistrict} tierOf={tierOf} ratioOf={ratioOf} />
       )}
 
-      <Legend tierMode={tierMode} />
+      <Legend tierMode={tierMode} showNoOutcomeNote={!!noOutcomeGeoids} />
     </div>
   )
 }

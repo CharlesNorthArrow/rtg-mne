@@ -16,6 +16,9 @@ export default function ControlStrip({
   counties,
   selectedCounties,
   onCountiesChange,
+  typologyOptions,
+  selectedTypologies,
+  onTypologiesChange,
   districts,
   selectedDistrictGeoid,
   onDistrictSelect,
@@ -25,6 +28,11 @@ export default function ControlStrip({
   needThresholds,
   onNeedChange,
   onNeedReset,
+  outcomeFilters,
+  onOutcomeChange,
+  onOutcomeReset,
+  elaRange,
+  elaDisabled,
   visibleCount,
   totalCount,
 }) {
@@ -42,6 +50,11 @@ export default function ControlStrip({
         selected={selectedCounties}
         onChange={onCountiesChange}
       />
+      <TypologyFilter
+        all={typologyOptions}
+        selected={selectedTypologies}
+        onChange={onTypologiesChange}
+      />
       <DistrictFilter
         districts={districts}
         selectedGeoid={selectedDistrictGeoid}
@@ -56,6 +69,13 @@ export default function ControlStrip({
         visibleCount={visibleCount}
         totalCount={totalCount}
       />
+      <OutcomesFilter
+        value={outcomeFilters}
+        onChange={onOutcomeChange}
+        onReset={onOutcomeReset}
+        elaRange={elaRange}
+        elaDisabled={elaDisabled}
+      />
       <Playback
         yearRange={yearRange}
         year={year}
@@ -69,7 +89,7 @@ export default function ControlStrip({
 }
 
 // ── County multi-select ─────────────────────────────────────────────────
-function CountyFilter({ all, selected, onChange }) {
+export function CountyFilter({ all, selected, onChange }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -115,6 +135,73 @@ function CountyFilter({ all, selected, onChange }) {
                 onChange={() => toggle(c)}
               />
               <span>{countyShort(c)}</span>
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <button
+              onClick={() => onChange([])}
+              className="mt-1 w-full rounded px-2 py-1 text-left text-xs hover:bg-gray-50"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── District-type (typology) multi-select ──────────────────────────────
+// Empty selected[] = "all four selected" (no filter). Districts whose GeoJSON
+// name doesn't resolve to a typology row stay visible regardless of selection;
+// that rule is enforced in DashboardPage's visibleGeoids composition, not here.
+export function TypologyFilter({ all, selected, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function close(e) { if (!ref.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const label = selected.length === 0 ? 'All district types' : `District types (${selected.length})`
+
+  function toggle(t) {
+    onChange(selected.includes(t) ? selected.filter(x => x !== t) : [...selected, t])
+  }
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="rounded px-3 py-1.5 text-sm"
+        style={{
+          background: 'var(--color-background-primary)',
+          border: '0.5px solid var(--color-border-tertiary)',
+          color: 'var(--color-text-primary)',
+          minWidth: 160,
+          textAlign: 'left',
+        }}
+        title="Filter by CT town typology (Rural / Suburban / Urban Periphery / Urban Core)"
+      >
+        {label} <span className="ml-1" style={{ color: 'var(--color-text-tertiary)' }}>▾</span>
+      </button>
+      {open && (
+        <div
+          className="absolute z-20 mt-1 w-56 rounded-md p-2 shadow-lg"
+          style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-secondary)' }}
+        >
+          {all.map(t => (
+            <label key={t} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={selected.includes(t)}
+                onChange={() => toggle(t)}
+              />
+              <span>{t}</span>
             </label>
           ))}
           {selected.length > 0 && (
@@ -217,6 +304,207 @@ function NeedFilter({ value, onChange, onReset, visibleCount, totalCount }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Outcomes filter (KEI low, KEI high, ELA index) ─────────────────────
+// Collapsed by default. "Active" = slider has been moved off its neutral
+// position; an active count appears on the button. Districts that lack
+// outcome data for the selected year are NOT filtered by these sliders —
+// that rule is enforced in DashboardPage's visibleGeoids composition.
+function OutcomesFilter({ value, onChange, onReset, elaRange, elaDisabled = false }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function close(e) { if (!ref.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const elaLow  = value?.elaMin ?? elaRange.min
+  const elaHigh = value?.elaMax ?? elaRange.max
+  const elaActive = elaLow > elaRange.min || elaHigh < elaRange.max
+  const activeCount =
+    (value?.keiLowMin  > 0        ? 1 : 0) +
+    (value?.keiHighMin > 0        ? 1 : 0) +
+    (!elaDisabled && elaActive    ? 1 : 0)
+  const label = activeCount === 0 ? 'Outcomes: any' : `Outcomes (${activeCount})`
+
+  function update(patch) { onChange({ ...value, ...patch }) }
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="rounded px-3 py-1.5 text-sm"
+        style={{
+          background: 'var(--color-background-primary)',
+          border: '0.5px solid var(--color-border-tertiary)',
+          color: 'var(--color-text-primary)',
+          minWidth: 160,
+          textAlign: 'left',
+        }}
+        title="Filter districts by KEI and ELA outcomes for the selected year"
+      >
+        {label} <span className="ml-1" style={{ color: 'var(--color-text-tertiary)' }}>▾</span>
+      </button>
+      {open && (
+        <div
+          className="absolute z-20 mt-1 w-80 rounded-md p-3 shadow-lg"
+          style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-secondary)' }}
+        >
+          <SliderRow
+            label="KEI — % Scoring Lowest"
+            helper="Higher % means more children scoring at the lowest level"
+            min={0}
+            max={100}
+            step={1}
+            value={value?.keiLowMin ?? 0}
+            valueLabel={`≥ ${value?.keiLowMin ?? 0}%`}
+            onChange={v => update({ keiLowMin: v })}
+            ariaLabel="KEI % scoring lowest — lower bound"
+          />
+          <SliderRow
+            label="KEI — % Scoring Highest"
+            helper="Higher % means more children scoring at the highest level"
+            min={0}
+            max={100}
+            step={1}
+            value={value?.keiHighMin ?? 0}
+            valueLabel={`≥ ${value?.keiHighMin ?? 0}%`}
+            onChange={v => update({ keiHighMin: v })}
+            ariaLabel="KEI % scoring highest — lower bound"
+          />
+          <DualSliderRow
+            label="3rd Grade ELA Index — All Students"
+            helper={elaDisabled
+              ? 'No ELA data for the selected year — pick another year to enable this filter.'
+              : 'Higher index reflects stronger 3rd grade reading outcomes'}
+            min={elaRange.min}
+            max={elaRange.max}
+            low={elaLow}
+            high={elaHigh}
+            disabled={elaDisabled}
+            onChange={({ low, high }) => update({ elaMin: low, elaMax: high })}
+            ariaLabelLow="ELA index — lower bound"
+            ariaLabelHigh="ELA index — upper bound"
+          />
+          <div className="mt-1 flex items-center justify-between text-[11px]">
+            <span style={{ color: 'var(--color-text-tertiary)' }}>
+              Uses selected year. Districts with no data stay visible (hatched).
+            </span>
+            {activeCount > 0 && (
+              <button
+                onClick={onReset}
+                className="rounded px-2 py-0.5 hover:bg-gray-50"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SliderRow({ label, helper, min, max, step, value, valueLabel, onChange, ariaLabel }) {
+  return (
+    <div className="mb-3 last:mb-1">
+      <div className="flex items-baseline justify-between text-xs mb-0.5">
+        <span style={{ color: 'var(--color-text-primary)' }}>{label}</span>
+        <span className="tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+          {valueLabel}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full accent-gray-700"
+        aria-label={ariaLabel}
+      />
+      <div className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+        {helper}
+      </div>
+    </div>
+  )
+}
+
+// Two-handle range slider. Both inputs sit on top of a shared track; only
+// the thumbs are interactive (see .dual-range rules in index.css). When the
+// user drags one handle past the other we clamp so low ≤ high.
+function DualSliderRow({ label, helper, min, max, low, high, disabled, onChange, ariaLabelLow, ariaLabelHigh }) {
+  const span = Math.max(max - min, 1)
+  const lowPct  = ((low  - min) / span) * 100
+  const highPct = ((high - min) / span) * 100
+  const dimmed = disabled ? { opacity: 0.5 } : null
+  const valueLabel = disabled ? 'n/a' : (low === min && high === max ? 'all' : `${low} – ${high}`)
+
+  return (
+    <div className="mb-3 last:mb-1" style={dimmed}>
+      <div className="flex items-baseline justify-between text-xs mb-0.5">
+        <span style={{ color: 'var(--color-text-primary)' }}>{label}</span>
+        <span className="tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+          {valueLabel}
+        </span>
+      </div>
+      <div className="dual-range relative" style={{ height: 20 }}>
+        {/* Shared track + selected sub-range */}
+        <div
+          aria-hidden
+          className="absolute left-0 right-0 rounded"
+          style={{ top: 9, height: 2, background: disabled ? '#E5E7EB' : '#D1D5DB' }}
+        />
+        <div
+          aria-hidden
+          className="absolute rounded"
+          style={{
+            top: 9, height: 2,
+            left:  `${lowPct}%`,
+            right: `${100 - highPct}%`,
+            background: disabled ? '#9CA3AF' : '#374151',
+          }}
+        />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={1}
+          value={low}
+          disabled={disabled}
+          onChange={e => {
+            const v = Math.min(Number(e.target.value), high)
+            onChange({ low: v, high })
+          }}
+          className="absolute inset-0 w-full"
+          aria-label={ariaLabelLow}
+        />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={1}
+          value={high}
+          disabled={disabled}
+          onChange={e => {
+            const v = Math.max(Number(e.target.value), low)
+            onChange({ low, high: v })
+          }}
+          className="absolute inset-0 w-full"
+          aria-label={ariaLabelHigh}
+        />
+      </div>
+      <div className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+        {helper}
+      </div>
     </div>
   )
 }

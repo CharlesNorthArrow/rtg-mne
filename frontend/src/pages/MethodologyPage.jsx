@@ -117,10 +117,165 @@ function ExecutiveSummary() {
       <p>
         For each of Connecticut’s 158 school districts, we calculate a reach ratio: the estimated number of books distributed per child aged 0–9, based on a three-year average of our distribution data. Using a three-year window reduces the effect of any single unusual year and gives a more stable picture of our presence in each community. We report this ratio for all children in a district and separately for high-needs children (those who are economically disadvantaged, English learners, or students with disabilities), because equitable reach matters as much as overall reach. Each of those three subgroups is also reported separately in district detail and can be used to filter the map.
       </p>
+      <RatioDiagram />
       <p>
         Each district is assigned a tier from 0 to 5 based on where its ratio falls against a fixed set of benchmarks. These benchmarks do not change from year to year. That is deliberate: a district moving from Tier 2 to Tier 3 represents real growth in our reach, not a shift in how we define the tiers. Districts we have not yet reached are included at Tier 0, so no community is left out of the picture.
       </p>
+      <TierMappingDiagram />
     </section>
+  )
+}
+
+// ── Ratio diagram (after exec-summary paragraph 2) ─────────────────────
+function RatioDiagram() {
+  return (
+    <div
+      className="p-4 my-2"
+      style={{
+        background: 'var(--color-background-secondary)',
+        borderRadius: 'var(--radius-md, 8px)',
+        border: '0.5px solid var(--color-border-tertiary)',
+      }}
+    >
+      <div className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+        Example: District A — how the ratio is computed
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4 text-sm">
+        <span className="inline-flex items-center gap-2">
+          <span aria-hidden="true" className="text-lg">👶</span>
+          <span><strong>200</strong> children aged 0–9</span>
+        </span>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>·</span>
+        <span className="inline-flex items-center gap-2">
+          <span aria-hidden="true" className="text-lg">🎯</span>
+          <span><strong>50</strong> of them high-needs</span>
+        </span>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>·</span>
+        <span className="inline-flex items-center gap-2">
+          <span aria-hidden="true" className="text-lg">📚</span>
+          <span><strong>60</strong> books distributed</span>
+        </span>
+      </div>
+
+      <RatioRow label="Overall"    numerator={60} denominator={200} result={0.30} tier={4} />
+      <RatioRow label="High-Needs" numerator={60} denominator={50}  result={1.20} tier={5} />
+    </div>
+  )
+}
+
+function RatioRow({ label, numerator, denominator, result, tier }) {
+  const cfg = TIER_CONFIG[tier]
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 text-[14px]">
+      <span className="w-24 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+        {label}
+      </span>
+      <span className="font-mono tabular-nums">
+        {numerator} <span style={{ color: 'var(--color-text-tertiary)' }}>÷</span> {denominator}
+      </span>
+      <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>→</span>
+      <span className="font-mono tabular-nums font-semibold">{result.toFixed(2)}</span>
+      <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>→</span>
+      <span
+        className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
+        style={{ background: cfg.mapColor, color: cfg.textColor }}
+      >
+        T{tier} · {cfg.label}
+      </span>
+    </div>
+  )
+}
+
+// ── Tier-mapping diagram (after exec-summary paragraph 3) ──────────────
+function TierMappingDiagram() {
+  return (
+    <div
+      className="p-4 my-2"
+      style={{
+        background: 'var(--color-background-secondary)',
+        borderRadius: 'var(--radius-md, 8px)',
+        border: '0.5px solid var(--color-border-tertiary)',
+      }}
+    >
+      <div className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+        How two districts land in different tiers
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <DistrictCard
+          name="District A"
+          kids={200}
+          books={60}
+          ratio={0.30}
+          tier={4}
+          note="Good reach"
+        />
+        <DistrictCard
+          name="District B"
+          kids={400}
+          books={8}
+          ratio={0.02}
+          tier={2}
+          note="Much smaller reach"
+        />
+      </div>
+
+      <div>
+        <div className="flex h-6 overflow-hidden" style={{ borderRadius: 4 }}>
+          {TIER_KEYS.map(t => (
+            <div
+              key={t}
+              className="flex-1 flex items-center justify-center text-[10px] font-medium"
+              style={{ background: TIER_CONFIG[t].mapColor, color: TIER_CONFIG[t].textColor }}
+            >
+              T{t}
+            </div>
+          ))}
+        </div>
+        <div className="flex mt-1 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+          {TIER_KEYS.map(t => (
+            <span key={t} className="flex-1 text-center">
+              {t === 2 ? '▲ District B' : t === 4 ? '▲ District A' : ''}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DistrictCard({ name, kids, books, ratio, tier, note }) {
+  const cfg = TIER_CONFIG[tier]
+  return (
+    <div
+      className="p-3 text-sm"
+      style={{
+        background: 'var(--color-background-primary)',
+        borderRadius: 'var(--radius-md, 8px)',
+        border: '0.5px solid var(--color-border-tertiary)',
+      }}
+    >
+      <div className="font-medium mb-1">{name}</div>
+      <div className="text-[12px] mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+        <span aria-hidden="true">👶</span> {kids} children
+        <span className="mx-1" style={{ color: 'var(--color-text-tertiary)' }}>·</span>
+        <span aria-hidden="true">📚</span> {books} books
+      </div>
+      <div className="flex items-center gap-2 text-[13px]">
+        <span className="font-mono tabular-nums">{ratio.toFixed(2)} BPC</span>
+        <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>→</span>
+        <span
+          className="inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
+          style={{ background: cfg.mapColor, color: cfg.textColor }}
+        >
+          T{tier} · {cfg.label}
+        </span>
+      </div>
+      <div className="text-[11px] mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+        {note}
+      </div>
+    </div>
   )
 }
 

@@ -8,15 +8,13 @@ import {
   Tooltip as ChartTooltip,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { AGE_LABELS } from '../../../lib/tiers.js'
 import { makeVerticalYearLinePlugin } from '../../../lib/chartPlugins.js'
+import OutcomesOverTime from './OutcomesOverTime.jsx'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip)
 ChartJS.register(makeVerticalYearLinePlugin('verticalYearLineDemographics'))
 
-const COLOR_OVERALL = '#243A78'  // brand blue
-const COLOR_HN      = '#B2182B'  // tier-0 red
-const COLOR_ECON    = '#B2182B'  // EconDis is the dominant HN subgroup, uses the same red
+const COLOR_ECON    = '#B2182B'  // tier-0 red — EconDis is the dominant HN subgroup
 const COLOR_EL      = '#EF8A62'  // tier-1 lighter red-orange
 const COLOR_SWD     = '#6B7280'  // slate
 
@@ -54,9 +52,9 @@ function lineDataset({ label, data, color, dashed = false }) {
   }
 }
 
-export default function DemographicsContext({ demographics, age, year }) {
+export default function DemographicsContext({ demographics, geoid, year }) {
   const {
-    years, ratioOverall, ratioHn,
+    years,
     econDisShare, elShare, swdShare,
     econDisSplitShare, swdSplitShare,
   } = demographics
@@ -91,18 +89,6 @@ export default function DemographicsContext({ demographics, age, year }) {
   }, [labels, econDisShare, elShare, swdShare, econDisSplitShare, swdSplitShare, splitEconDis, splitSwD])
 
   const hasAnyShare = shareData.datasets.some(d => d.data.some(v => v != null && !isNaN(v)))
-
-  // ── Right: Overall vs HN ratio (clean 2-line chart) ──────────────────
-  const ratiosData = useMemo(() => ({
-    labels,
-    datasets: [
-      lineDataset({ label: 'Overall', data: ratioOverall, color: COLOR_OVERALL }),
-      lineDataset({ label: 'High-needs', data: ratioHn, color: COLOR_HN, dashed: true }),
-    ],
-  }), [labels, ratioOverall, ratioHn])
-
-  const hasAnyRatio = ratioOverall.some(v => v != null && !isNaN(v))
-                  || ratioHn.some(v => v != null && !isNaN(v))
 
   const baseOptions = useMemo(() => ({
     responsive: true,
@@ -146,19 +132,6 @@ export default function DemographicsContext({ demographics, age, year }) {
     },
   }), [baseOptions])
 
-  const ratiosOptions = useMemo(() => ({
-    ...baseOptions,
-    plugins: {
-      ...baseOptions.plugins,
-      tooltip: {
-        callbacks: {
-          title: items => `Year ${items[0].label}`,
-          label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y == null ? '—' : ctx.parsed.y.toFixed(3)}`,
-        },
-      },
-    },
-  }), [baseOptions])
-
   return (
     <div className="flex flex-1 min-h-0 gap-3">
       <Mini
@@ -183,18 +156,7 @@ export default function DemographicsContext({ demographics, age, year }) {
       >
         <Line data={shareData} options={shareOptions} />
       </Mini>
-      <Mini
-        title={`Books per child · ${AGE_LABELS[age]}`}
-        empty={!hasAnyRatio}
-        legend={
-          <div className="flex items-center gap-3 text-[9px]" style={{ color: 'var(--color-text-tertiary)' }}>
-            <Swatch color={COLOR_OVERALL} label="Overall" />
-            <Swatch color={COLOR_HN} label="High-needs" dashed />
-          </div>
-        }
-      >
-        <Line data={ratiosData} options={ratiosOptions} />
-      </Mini>
+      <OutcomesOverTime geoid={geoid} year={year} />
     </div>
   )
 }
